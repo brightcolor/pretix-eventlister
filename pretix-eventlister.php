@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.2.13
+ * Version: 1.2.14
  * Author: Bright Color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.2.13';
+	const VERSION = '1.2.14';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -536,7 +536,9 @@ final class Pretix_Eventlister {
 					$organizer_name,
 					$platform_organizers,
 					$options['platform_notice'],
-					$base_url
+					$base_url,
+					$api_token,
+					absint($options['cache_ttl'])
 				);
 
 				if ($normalized_event) {
@@ -667,7 +669,7 @@ final class Pretix_Eventlister {
 		return $results;
 	}
 
-	private function normalize_event($event, $organizer_slug, $organizer_name, $platform_organizers, $platform_notice, $base_url) {
+	private function normalize_event($event, $organizer_slug, $organizer_name, $platform_organizers, $platform_notice, $base_url, $api_token, $cache_ttl) {
 		if (isset($event['live']) && ! $event['live']) {
 			return null;
 		}
@@ -687,6 +689,21 @@ final class Pretix_Eventlister {
 
 		$schedule = $this->format_schedule($date_from, $date_to);
 		$is_platform_event = in_array($organizer_slug, $platform_organizers, true);
+		$settings = array();
+
+		if (! empty($event['slug'])) {
+			$settings = $this->get_event_settings(
+				$base_url,
+				$api_token,
+				$organizer_slug,
+				$event['slug'],
+				$cache_ttl
+			);
+
+			if (is_wp_error($settings)) {
+				$settings = array();
+			}
+		}
 
 		return array(
 			'name' => $this->resolve_event_name($event),
@@ -695,8 +712,8 @@ final class Pretix_Eventlister {
 			'organizer_name' => $organizer_name,
 			'location' => ! empty($event['location']) ? wp_strip_all_tags($event['location']) : '',
 			'url' => $this->resolve_public_url($event, $base_url, $organizer_slug),
-			'description' => $this->resolve_event_description($event),
-			'image' => $this->extract_image_url($event),
+			'description' => $this->resolve_event_description($event, $settings),
+			'image' => $this->extract_image_url($event, $settings, $base_url),
 			'date_from' => $date_from,
 			'date_to' => $date_to,
 			'sort_timestamp' => $date_from ? $date_from : ($date_to ? $date_to : PHP_INT_MAX),
@@ -708,6 +725,66 @@ final class Pretix_Eventlister {
 			'is_platform_event' => $is_platform_event,
 			'platform_notice' => $is_platform_event ? $platform_notice : '',
 		);
+	}
+
+	private function get_event_settings($base_url, $api_token, $organizer_slug, $event_slug, $cache_ttl) {
+		$cache_key = self::CACHE_PREFIX . 'settings_' . md5($base_url . '|' . $organizer_slug . '|' . $event_slug);
+		$cached = get_transient($cache_key);
+		if (false !== $cached) {
+			return $cached;
+		}
+
+		$settings = $this->get_api_object(
+			$this->build_api_url(
+				$base_url,
+				sprintf(
+					'api/v1/organizers/%1$s/events/%2$s/settings/',
+					rawurlencode($organizer_slug),
+					rawurlencode($event_slug)
+				)
+			),
+			$api_token
+		);
+
+		if (is_wp_error($settings)) {
+			return $settings;
+		}
+
+		set_transient($cache_key, $settings, MINUTE_IN_SECONDS * max(1, $cache_ttl));
+
+		return is_array($settings) ? $settings : array();
+	}
+
+	private function get_api_object($url, $api_token) {
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout' => 20,
+				'headers' => array(
+					'Authorization' => 'Token ' . $api_token,
+					'Accept' => 'application/json',
+				),
+			)
+		);
+
+		if (is_wp_error($response)) {
+			return new WP_Error(
+				'pretix_eventlister_request_failed',
+				__('Die pretix-Instanz konnte nicht erreicht werden.', 'pretix-eventlister')
+			);
+		}
+
+		$status_code = wp_remote_retrieve_response_code($response);
+		$body = json_decode(wp_remote_retrieve_body($response), true);
+
+		if (200 !== $status_code || ! is_array($body)) {
+			return new WP_Error(
+				'pretix_eventlister_invalid_response',
+				__('Die Antwort der pretix-API war ungueltig.', 'pretix-eventlister')
+			);
+		}
+
+		return $body;
 	}
 
 	private function build_collection_meta($query, $organizer_slugs, $organizer_index, $events) {
@@ -877,7 +954,15 @@ final class Pretix_Eventlister {
 		);
 	}
 
-	private function extract_image_url($event) {
+	private function extract_image_url($event, $settings = array(), $base_url = '') {
+		if (! empty($settings['logo_image']) && is_string($settings['logo_image'])) {
+			return $this->normalize_media_url($settings['logo_image'], $base_url);
+		}
+
+		if (! empty($event['picture']) && is_string($event['picture'])) {
+			return $this->normalize_media_url($event['picture'], $base_url);
+		}
+
 		if (! empty($event['image']) && is_string($event['image']) && filter_var($event['image'], FILTER_VALIDATE_URL)) {
 			return esc_url_raw($event['image']);
 		}
@@ -897,11 +982,11 @@ final class Pretix_Eventlister {
 		if (! empty($event['images']) && is_array($event['images'])) {
 			foreach ($event['images'] as $item) {
 				if (! empty($item['url'])) {
-					return esc_url_raw($item['url']);
+					return $this->normalize_media_url($item['url'], $base_url);
 				}
 
 				if (! empty($item['image'])) {
-					return esc_url_raw($item['image']);
+					return $this->normalize_media_url($item['image'], $base_url);
 				}
 			}
 		}
@@ -909,7 +994,7 @@ final class Pretix_Eventlister {
 		if (! empty($event['meta_data']) && is_array($event['meta_data'])) {
 			foreach (array('image', 'image_url', 'featured_image', 'header_image', 'thumbnail') as $key) {
 				if (! empty($event['meta_data'][ $key ]) && is_string($event['meta_data'][ $key ]) && filter_var($event['meta_data'][ $key ], FILTER_VALIDATE_URL)) {
-					return esc_url_raw($event['meta_data'][ $key ]);
+					return $this->normalize_media_url($event['meta_data'][ $key ], $base_url);
 				}
 			}
 		}
@@ -917,7 +1002,7 @@ final class Pretix_Eventlister {
 		if (! empty($event['item_meta_properties']) && is_array($event['item_meta_properties'])) {
 			foreach ($event['item_meta_properties'] as $property) {
 				if (! empty($property['value']) && filter_var($property['value'], FILTER_VALIDATE_URL)) {
-					return esc_url_raw($property['value']);
+					return $this->normalize_media_url($property['value'], $base_url);
 				}
 			}
 		}
@@ -949,8 +1034,10 @@ final class Pretix_Eventlister {
 		return ! empty($event['slug']) ? sanitize_text_field($event['slug']) : __('Unbenanntes Event', 'pretix-eventlister');
 	}
 
-	private function resolve_event_description($event) {
+	private function resolve_event_description($event, $settings = array()) {
 		$candidates = array(
+			isset($settings['frontpage_text']) ? $settings['frontpage_text'] : '',
+			isset($settings['description']) ? $settings['description'] : '',
 			isset($event['meta_data']['description']) ? $event['meta_data']['description'] : '',
 			isset($event['meta_data']['event_description']) ? $event['meta_data']['event_description'] : '',
 			isset($event['description']) ? $event['description'] : '',
@@ -967,6 +1054,19 @@ final class Pretix_Eventlister {
 		}
 
 		return '';
+	}
+
+	private function normalize_media_url($value, $base_url) {
+		$value = trim((string) $value);
+		if ('' === $value) {
+			return '';
+		}
+
+		if (preg_match('#^https?://#i', $value)) {
+			return esc_url_raw($value);
+		}
+
+		return esc_url_raw(untrailingslashit($base_url) . '/' . ltrim($value, '/'));
 	}
 
 	private function resolve_rich_text_value($value) {
