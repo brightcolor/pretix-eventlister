@@ -2,6 +2,11 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
+## [1.2.4] - 2026-04-16
+
+- Paket-Normalisierung fuer WordPress-Updates deutlich abgesichert, damit bereits korrekt benannte Plugin-Ordner nicht mehr unnoetig umgebogen werden.
+- Release-ZIP um `export-ignore` bereinigt, damit Entwicklungsdateien nicht mehr im Installationspaket landen.
+
 ## [1.2.3] - 2026-04-16
 
 - Author auf Bright Color mit GitHub-Repository-Link umgestellt.
