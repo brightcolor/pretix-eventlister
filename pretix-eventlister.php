@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.2.5
+ * Version: 1.2.6
  * Author: Bright Color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.2.5';
+	const VERSION = '1.2.6';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -726,6 +726,7 @@ final class Pretix_Eventlister {
 			'month_label' => $schedule['month_label'],
 			'date_label' => $schedule['date_label'],
 			'time_label' => $schedule['time_label'],
+			'countdown_label' => $this->build_countdown_label($date_from),
 			'is_platform_event' => $is_platform_event,
 			'platform_notice' => $is_platform_event ? $platform_notice : '',
 		);
@@ -867,6 +868,35 @@ final class Pretix_Eventlister {
 		$midnight = $midnight->setTime(0, 0);
 
 		return $midnight->getTimestamp();
+	}
+
+	private function build_countdown_label($date_from) {
+		if (! $date_from) {
+			return '';
+		}
+
+		$today = new DateTimeImmutable('now', wp_timezone());
+		$today = $today->setTime(0, 0);
+		$event_day = (new DateTimeImmutable('@' . $date_from))->setTimezone(wp_timezone())->setTime(0, 0);
+		$days_until = (int) $today->diff($event_day)->format('%r%a');
+
+		if ($days_until < 0) {
+			return '';
+		}
+
+		if (0 === $days_until) {
+			return __('Beginnt heute', 'pretix-eventlister');
+		}
+
+		if (1 === $days_until) {
+			return __('Beginnt morgen', 'pretix-eventlister');
+		}
+
+		return sprintf(
+			/* translators: %d: days until the event starts */
+			__('Beginnt in %d Tagen', 'pretix-eventlister'),
+			$days_until
+		);
 	}
 
 	private function extract_image_url($event) {

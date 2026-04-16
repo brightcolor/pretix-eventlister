@@ -2,6 +2,10 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
+## [1.2.6] - 2026-04-16
+
+- Hinweis auf Eventkarten hinzugefuegt, in wie vielen Tagen ein Event beginnt.
+
 ## [1.2.5] - 2026-04-16
 
 - Eventbilder robuster aus pretix-Datenfeldern aufgeloest.

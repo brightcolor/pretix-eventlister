@@ -72,6 +72,10 @@
 									<span><?php echo esc_html($event['location']); ?></span>
 								<?php endif; ?>
 							</div>
+
+							<?php if (! empty($event['countdown_label'])) : ?>
+								<p class="pretix-eventlister__countdown"><?php echo esc_html($event['countdown_label']); ?></p>
+							<?php endif; ?>
 						</div>
 					</div>
 

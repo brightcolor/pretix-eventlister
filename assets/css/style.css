@@ -310,6 +310,17 @@
 	margin-top: 0.35rem;
 }
 
+.pretix-eventlister__countdown {
+	background: rgba(223, 109, 75, 0.12);
+	border-radius: 999px;
+	color: #a9482d;
+	display: inline-flex;
+	font-size: 0.82rem;
+	font-weight: 700;
+	margin: 0.7rem 0 0;
+	padding: 0.35rem 0.75rem;
+}
+
 .pretix-eventlister__body {
 	display: grid;
 	gap: 0.85rem;
