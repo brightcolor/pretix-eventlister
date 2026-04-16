@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.2.1
+ * Version: 1.2.2
  * Author: Codex
  * Text Domain: pretix-eventlister
  * Update URI: https://github.com/brightcolor/pretix-eventlister
@@ -13,7 +13,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.2.1';
+	const VERSION = '1.2.2';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -203,9 +203,6 @@ final class Pretix_Eventlister {
 				<li><code>[pretix_events organizers="hsp-events,partner-a,partner-b"]</code></li>
 				<li><code>[pretix_events scope="all" style="list" show_description="no"]</code></li>
 			</ul>
-			<p>
-				<?php echo esc_html__('Plugin-Updates koennen direkt ueber GitHub-Releases bezogen werden. Sobald ein neues Release mit ZIP-Datei verfuegbar ist, erkennt WordPress das Update automatisch.', 'pretix-eventlister'); ?>
-			</p>
 		</div>
 		<?php
 	}

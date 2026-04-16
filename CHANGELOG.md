@@ -2,6 +2,10 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
+## [1.2.2] - 2026-04-16
+
+- Hinweis zu GitHub-Updates von der Plugin-Einstellungsseite entfernt.
+
 ## [1.2.1] - 2026-04-16
 
 - Installations- und Updatepakete werden nun auf den festen Plugin-Ordner `pretix-eventlister` normalisiert.
