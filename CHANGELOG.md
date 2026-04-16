@@ -2,11 +2,12 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
-## [1.2.15] - 2026-04-16
+## [1.2.16] - 2026-04-16
 
 - Pretix-Hinweise und Zusammenfassung im Frontend-Header entfernt.
 - Button in der Event-Uebersicht auf `Tickets ab ...` mit dem guenstigsten Ticketpreis umgestellt.
 - Eventbeschreibungen und Bilder um die pretix-Event-Settings (`frontpage_text`, `logo_image`) aus der Referenz-Implementierung erweitert.
+- Fehlende Methode `get_locale_preferences()` fuer lokalisierte Textfelder ergaenzt.
 
 ## [1.2.6] - 2026-04-16
 

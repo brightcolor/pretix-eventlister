@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.2.15
+ * Version: 1.2.16
  * Author: Bright Color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.2.15';
+	const VERSION = '1.2.16';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -1178,6 +1178,28 @@ final class Pretix_Eventlister {
 		$formatted = number_format_i18n((float) $amount, 2);
 		$formatted = preg_replace('/([,.]00)$/', '', $formatted);
 		return $formatted ? $formatted : '0';
+	}
+
+	private function get_locale_preferences() {
+		$preferences = array();
+		$locale = function_exists('determine_locale') ? determine_locale() : get_locale();
+
+		if (is_string($locale) && '' !== $locale) {
+			$preferences[] = strtolower(str_replace('-', '_', $locale));
+
+			if (false !== strpos($locale, '_')) {
+				$preferences[] = strtolower(strtok($locale, '_'));
+			}
+
+			if (false !== strpos($locale, '-')) {
+				$preferences[] = strtolower(strtok($locale, '-'));
+			}
+		}
+
+		$preferences[] = 'de';
+		$preferences[] = 'en';
+
+		return array_values(array_unique(array_filter($preferences)));
 	}
 
 	private function resolve_rich_text_value($value) {
