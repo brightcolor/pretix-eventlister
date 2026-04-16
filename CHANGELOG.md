@@ -2,6 +2,12 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
+## [1.2.3] - 2026-04-16
+
+- Author auf Bright Color mit GitHub-Repository-Link umgestellt.
+- Plugin-Icon fuer WordPress-Plugin-Details und die Plugin-Uebersicht hinzugefuegt.
+- GitHub-Repository und Changelog in der Plugin-Uebersicht verlinkt.
+
 ## [1.2.2] - 2026-04-16
 
 - Hinweis zu GitHub-Updates von der Plugin-Einstellungsseite entfernt.

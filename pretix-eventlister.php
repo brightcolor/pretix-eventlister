@@ -2,8 +2,9 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.2.2
- * Author: Codex
+ * Version: 1.2.3
+ * Author: Bright Color
+ * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
  * Update URI: https://github.com/brightcolor/pretix-eventlister
  */
@@ -13,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.2.2';
+	const VERSION = '1.2.3';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -27,11 +28,13 @@ final class Pretix_Eventlister {
 	public function __construct() {
 		add_action('admin_menu', array($this, 'register_settings_page'));
 		add_action('admin_init', array($this, 'register_settings'));
+		add_action('admin_enqueue_scripts', array($this, 'enqueue_plugin_admin_assets'));
 		add_action('wp_enqueue_scripts', array($this, 'register_assets'));
 		add_action('upgrader_process_complete', array($this, 'handle_upgrader_process_complete'), 10, 2);
 		add_filter('upgrader_source_selection', array($this, 'normalize_package_source'), 10, 4);
 		add_filter('pre_set_site_transient_update_plugins', array($this, 'inject_update_information'));
 		add_filter('plugins_api', array($this, 'inject_plugin_information'), 20, 3);
+		add_filter('plugin_row_meta', array($this, 'add_plugin_row_meta'), 10, 4);
 		add_shortcode('pretix_events', array($this, 'render_shortcode'));
 	}
 
@@ -224,6 +227,43 @@ final class Pretix_Eventlister {
 		);
 	}
 
+	public function enqueue_plugin_admin_assets($hook_suffix) {
+		if ('plugins.php' !== $hook_suffix) {
+			return;
+		}
+
+		$icon_url = esc_url($this->get_plugin_icon_url());
+		$plugin_selector = '#the-list tr[data-plugin="' . esc_attr($this->get_plugin_basename()) . '"] .plugin-title strong';
+
+		wp_register_style('pretix-eventlister-admin', false, array(), self::VERSION);
+		wp_enqueue_style('pretix-eventlister-admin');
+		wp_add_inline_style(
+			'pretix-eventlister-admin',
+			$plugin_selector . '{display:inline-flex;align-items:center;gap:10px;}' .
+			$plugin_selector . "::before{content:'';width:26px;height:26px;display:inline-block;flex:0 0 26px;border-radius:8px;background:#111827 url('" . $icon_url . "') center/18px 18px no-repeat;box-shadow:0 8px 18px rgba(15,23,42,.14);}"
+		);
+	}
+
+	public function add_plugin_row_meta($plugin_meta, $plugin_file, $plugin_data, $status) {
+		if ($this->get_plugin_basename() !== $plugin_file) {
+			return $plugin_meta;
+		}
+
+		$plugin_meta[] = sprintf(
+			'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
+			esc_url(self::GITHUB_REPOSITORY_URL),
+			esc_html__('GitHub-Repository', 'pretix-eventlister')
+		);
+
+		$plugin_meta[] = sprintf(
+			'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
+			esc_url($this->get_changelog_url()),
+			esc_html__('Changelog', 'pretix-eventlister')
+		);
+
+		return $plugin_meta;
+	}
+
 	public function render_shortcode($atts) {
 		$options = $this->get_options();
 		$query = $this->normalize_shortcode_atts($atts, $options);
@@ -278,7 +318,7 @@ final class Pretix_Eventlister {
 			'url' => $release['html_url'],
 			'package' => $release['package'],
 			'tested' => get_bloginfo('version'),
-			'icons' => array(),
+			'icons' => $this->get_plugin_icons(),
 			'banners' => array(),
 			'banners_rtl' => array(),
 			'requires_php' => self::MINIMUM_PHP,
@@ -307,7 +347,7 @@ final class Pretix_Eventlister {
 			'name' => __('Pretix Eventlister', 'pretix-eventlister'),
 			'slug' => self::PLUGIN_SLUG,
 			'version' => ! empty($release['version']) ? $release['version'] : self::VERSION,
-			'author' => '<a href="' . esc_url(self::GITHUB_REPOSITORY_URL) . '">Codex</a>',
+			'author' => '<a href="' . esc_url(self::GITHUB_REPOSITORY_URL) . '">Bright Color</a>',
 			'author_profile' => esc_url(self::GITHUB_REPOSITORY_URL),
 			'homepage' => esc_url(self::GITHUB_REPOSITORY_URL),
 			'download_link' => ! empty($release['package']) ? $release['package'] : '',
@@ -331,7 +371,7 @@ final class Pretix_Eventlister {
 				'changelog' => $this->format_release_notes_for_modal(isset($release['body']) ? $release['body'] : ''),
 			),
 			'banners' => array(),
-			'icons' => array(),
+			'icons' => $this->get_plugin_icons(),
 			'versions' => ! empty($release['package']) ? array($release['version'] => $release['package']) : array(),
 		);
 	}
@@ -1061,6 +1101,24 @@ final class Pretix_Eventlister {
 
 	private function get_default_platform_notice() {
 		return __('HSP-Events stellt fuer dieses Event ausschliesslich die Ticket- und Plattforminfrastruktur bereit. Veranstalter und Inhalte liegen beim jeweils genannten Anbieter.', 'pretix-eventlister');
+	}
+
+	private function get_plugin_icon_url() {
+		return plugin_dir_url(__FILE__) . 'assets/icon.svg';
+	}
+
+	private function get_plugin_icons() {
+		$icon_url = $this->get_plugin_icon_url();
+
+		return array(
+			'default' => $icon_url,
+			'1x' => $icon_url,
+			'2x' => $icon_url,
+		);
+	}
+
+	private function get_changelog_url() {
+		return trailingslashit(self::GITHUB_REPOSITORY_URL) . 'releases';
 	}
 
 	private function is_target_plugin_upgrade($hook_extra, $plugin_source) {
