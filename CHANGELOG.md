@@ -1,0 +1,23 @@
+# Changelog
+
+Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
+
+## [1.1.1] - 2026-04-16
+
+- `CHANGELOG.md` zum Plugin hinzugefuegt.
+- Versionierung im Code auf `1.1.1` angehoben.
+- Asset-Versionen auf eine zentrale Versionskonstante umgestellt.
+- Release-ZIP fuer diese Version erstellt.
+
+## [1.1.0] - 2026-04-16
+
+- Modernes Frontend mit Hero-Bereich, Summary-Chips und hochwertiger Kartenansicht umgesetzt.
+- Support fuer alle Veranstalter, einen Veranstalter oder mehrere Veranstalter hinzugefuegt.
+- HSP-Hinweislogik fuer ausgewaehlte Partner-Veranstalter integriert.
+- API-Abfrage um Organizer-Index, Pagination und robustere Event-Normalisierung erweitert.
+
+## [1.0.0] - 2026-04-16
+
+- Erstes Release des Plugins.
+- pretix-Anbindung mit API-Token und Organizer-Slug umgesetzt.
+- Responsive Event-Ausgabe per Shortcode `[pretix_events]` eingefuehrt.
