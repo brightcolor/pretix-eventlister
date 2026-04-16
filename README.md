@@ -45,6 +45,11 @@ Beispiele:
 
 In den Plugin-Einstellungen kannst du Organizer definieren, bei denen automatisch ein Hinweis auf jeder Event-Karte angezeigt wird, dass HSP-Events nur die Plattform bzw. Ticketinfrastruktur bereitstellt.
 
+## Updates ueber GitHub
+
+Das Plugin kann Updates direkt aus dem GitHub-Repository beziehen.
+Sobald ein neues GitHub-Release mit passender ZIP-Datei veroeffentlicht wird, erkennt WordPress die neue Version automatisch im Plugin-Updater.
+
 ## Versionierung
 
 Das Plugin verwendet Semantic Versioning im Schema `major.minor.patch`.

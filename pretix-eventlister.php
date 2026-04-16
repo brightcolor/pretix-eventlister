@@ -2,9 +2,10 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.1.1
+ * Version: 1.2.0
  * Author: Codex
  * Text Domain: pretix-eventlister
+ * Update URI: https://github.com/brightcolor/pretix-eventlister
  */
 
 if (! defined('ABSPATH')) {
@@ -12,14 +13,24 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.1.1';
+	const VERSION = '1.2.0';
+	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
+	const GITHUB_REPOSITORY = 'brightcolor/pretix-eventlister';
+	const GITHUB_REPOSITORY_URL = 'https://github.com/brightcolor/pretix-eventlister';
+	const GITHUB_RELEASES_API = 'https://api.github.com/repos/brightcolor/pretix-eventlister/releases/latest';
+	const GITHUB_RELEASE_CACHE_KEY = 'pretix_eventlister_github_release';
+	const GITHUB_RELEASE_CACHE_TTL = 21600;
+	const MINIMUM_PHP = '7.4';
 
 	public function __construct() {
 		add_action('admin_menu', array($this, 'register_settings_page'));
 		add_action('admin_init', array($this, 'register_settings'));
 		add_action('wp_enqueue_scripts', array($this, 'register_assets'));
+		add_action('upgrader_process_complete', array($this, 'handle_upgrader_process_complete'), 10, 2);
+		add_filter('pre_set_site_transient_update_plugins', array($this, 'inject_update_information'));
+		add_filter('plugins_api', array($this, 'inject_plugin_information'), 20, 3);
 		add_shortcode('pretix_events', array($this, 'render_shortcode'));
 	}
 
@@ -191,6 +202,9 @@ final class Pretix_Eventlister {
 				<li><code>[pretix_events organizers="hsp-events,partner-a,partner-b"]</code></li>
 				<li><code>[pretix_events scope="all" style="list" show_description="no"]</code></li>
 			</ul>
+			<p>
+				<?php echo esc_html__('Plugin-Updates koennen direkt ueber GitHub-Releases bezogen werden. Sobald ein neues Release mit ZIP-Datei verfuegbar ist, erkennt WordPress das Update automatisch.', 'pretix-eventlister'); ?>
+			</p>
 		</div>
 		<?php
 	}
@@ -243,6 +257,103 @@ final class Pretix_Eventlister {
 		ob_start();
 		include plugin_dir_path(__FILE__) . 'templates/events-list.php';
 		return ob_get_clean();
+	}
+
+	public function inject_update_information($transient) {
+		if (! is_object($transient) || empty($transient->checked)) {
+			return $transient;
+		}
+
+		$plugin_basename = $this->get_plugin_basename();
+		$current_version = isset($transient->checked[ $plugin_basename ]) ? $transient->checked[ $plugin_basename ] : self::VERSION;
+		$release = $this->get_latest_github_release();
+
+		if (is_wp_error($release) || empty($release['version']) || empty($release['package'])) {
+			return $transient;
+		}
+
+		$plugin_data = (object) array(
+			'id' => self::GITHUB_REPOSITORY_URL,
+			'slug' => self::PLUGIN_SLUG,
+			'plugin' => $plugin_basename,
+			'new_version' => $release['version'],
+			'url' => $release['html_url'],
+			'package' => $release['package'],
+			'tested' => get_bloginfo('version'),
+			'icons' => array(),
+			'banners' => array(),
+			'banners_rtl' => array(),
+			'requires_php' => self::MINIMUM_PHP,
+		);
+
+		if (version_compare($release['version'], $current_version, '>')) {
+			$transient->response[ $plugin_basename ] = $plugin_data;
+		} else {
+			$transient->no_update[ $plugin_basename ] = $plugin_data;
+		}
+
+		return $transient;
+	}
+
+	public function inject_plugin_information($result, $action, $args) {
+		if ('plugin_information' !== $action || empty($args->slug) || self::PLUGIN_SLUG !== $args->slug) {
+			return $result;
+		}
+
+		$release = $this->get_latest_github_release();
+		if (is_wp_error($release)) {
+			return $result;
+		}
+
+		return (object) array(
+			'name' => __('Pretix Eventlister', 'pretix-eventlister'),
+			'slug' => self::PLUGIN_SLUG,
+			'version' => ! empty($release['version']) ? $release['version'] : self::VERSION,
+			'author' => '<a href="' . esc_url(self::GITHUB_REPOSITORY_URL) . '">Codex</a>',
+			'author_profile' => esc_url(self::GITHUB_REPOSITORY_URL),
+			'homepage' => esc_url(self::GITHUB_REPOSITORY_URL),
+			'download_link' => ! empty($release['package']) ? $release['package'] : '',
+			'trunk' => ! empty($release['package']) ? $release['package'] : '',
+			'requires' => '5.8',
+			'requires_php' => self::MINIMUM_PHP,
+			'last_updated' => ! empty($release['published_at']) ? $release['published_at'] : '',
+			'external' => true,
+			'sections' => array(
+				'description' => wp_kses_post(
+					'<p>' . __('Modernes WordPress-Plugin fuer pretix-Events mit Multi-Organizer-Support, responsiver Kartenansicht und optionalen HSP-Plattform-Hinweisen.', 'pretix-eventlister') . '</p>' .
+					'<p>' . __('Aktualisierungen werden direkt aus den GitHub-Releases dieses Plugins geladen.', 'pretix-eventlister') . '</p>'
+				),
+				'installation' => wp_kses_post(
+					'<ol>' .
+					'<li>' . __('Plugin in WordPress installieren oder aktualisieren.', 'pretix-eventlister') . '</li>' .
+					'<li>' . __('Unter Einstellungen > Pretix Eventlister die pretix-Zugangsdaten hinterlegen.', 'pretix-eventlister') . '</li>' .
+					'<li>' . __('Neue Versionen werden automatisch erkannt, sobald ein GitHub-Release mit ZIP-Datei veroeffentlicht wird.', 'pretix-eventlister') . '</li>' .
+					'</ol>'
+				),
+				'changelog' => $this->format_release_notes_for_modal(isset($release['body']) ? $release['body'] : ''),
+			),
+			'banners' => array(),
+			'icons' => array(),
+			'versions' => ! empty($release['package']) ? array($release['version'] => $release['package']) : array(),
+		);
+	}
+
+	public function handle_upgrader_process_complete($upgrader_object, $options) {
+		if (empty($options['action']) || 'update' !== $options['action']) {
+			return;
+		}
+
+		if (empty($options['type']) || 'plugin' !== $options['type']) {
+			return;
+		}
+
+		if (empty($options['plugins']) || ! is_array($options['plugins'])) {
+			return;
+		}
+
+		if (in_array($this->get_plugin_basename(), $options['plugins'], true)) {
+			delete_site_transient(self::GITHUB_RELEASE_CACHE_KEY);
+		}
 	}
 
 	private function normalize_shortcode_atts($atts, $options) {
@@ -778,6 +889,90 @@ final class Pretix_Eventlister {
 		return array_values(array_unique($slugs));
 	}
 
+	private function get_latest_github_release() {
+		$cached = get_site_transient(self::GITHUB_RELEASE_CACHE_KEY);
+		if (false !== $cached) {
+			return $cached;
+		}
+
+		$response = wp_remote_get(
+			self::GITHUB_RELEASES_API,
+			array(
+				'timeout' => 15,
+				'headers' => array(
+					'Accept' => 'application/vnd.github+json',
+					'User-Agent' => 'Pretix-Eventlister/' . self::VERSION . '; ' . home_url('/'),
+				),
+			)
+		);
+
+		if (is_wp_error($response)) {
+			return $response;
+		}
+
+		$status_code = wp_remote_retrieve_response_code($response);
+		$body = json_decode(wp_remote_retrieve_body($response), true);
+
+		if (200 !== $status_code || ! is_array($body) || empty($body['tag_name'])) {
+			return new WP_Error(
+				'pretix_eventlister_github_release_invalid',
+				__('Das neueste GitHub-Release konnte nicht geladen werden.', 'pretix-eventlister')
+			);
+		}
+
+		$release = array(
+			'version' => ltrim(sanitize_text_field($body['tag_name']), 'vV'),
+			'tag_name' => sanitize_text_field($body['tag_name']),
+			'package' => $this->find_release_package($body),
+			'body' => ! empty($body['body']) ? sanitize_textarea_field($body['body']) : '',
+			'html_url' => ! empty($body['html_url']) ? esc_url_raw($body['html_url']) : self::GITHUB_REPOSITORY_URL . '/releases',
+			'published_at' => ! empty($body['published_at']) ? sanitize_text_field($body['published_at']) : '',
+		);
+
+		set_site_transient(self::GITHUB_RELEASE_CACHE_KEY, $release, self::GITHUB_RELEASE_CACHE_TTL);
+
+		return $release;
+	}
+
+	private function find_release_package($release) {
+		if (empty($release['assets']) || ! is_array($release['assets'])) {
+			return '';
+		}
+
+		$first_zip = '';
+
+		foreach ($release['assets'] as $asset) {
+			if (empty($asset['browser_download_url']) || empty($asset['name'])) {
+				continue;
+			}
+
+			$name = (string) $asset['name'];
+			if ('.zip' !== strtolower(substr($name, -4))) {
+				continue;
+			}
+
+			if (! $first_zip) {
+				$first_zip = esc_url_raw($asset['browser_download_url']);
+			}
+
+			if (0 === strpos($name, self::PLUGIN_SLUG . '-')) {
+				return esc_url_raw($asset['browser_download_url']);
+			}
+		}
+
+		return $first_zip;
+	}
+
+	private function format_release_notes_for_modal($notes) {
+		if (! $notes) {
+			return wp_kses_post(
+				'<p>' . __('Details zur aktuellen Version findest du im CHANGELOG und in den GitHub-Releases des Plugins.', 'pretix-eventlister') . '</p>'
+			);
+		}
+
+		return wp_kses_post(wpautop(esc_html($notes)));
+	}
+
 	private function sanitize_slug_list($value) {
 		return implode(",\n", $this->parse_slug_list($value));
 	}
@@ -830,6 +1025,10 @@ final class Pretix_Eventlister {
 
 	private function get_default_platform_notice() {
 		return __('HSP-Events stellt fuer dieses Event ausschliesslich die Ticket- und Plattforminfrastruktur bereit. Veranstalter und Inhalte liegen beim jeweils genannten Anbieter.', 'pretix-eventlister');
+	}
+
+	private function get_plugin_basename() {
+		return plugin_basename(__FILE__);
 	}
 
 	private function get_options() {

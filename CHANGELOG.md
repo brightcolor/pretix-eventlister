@@ -2,6 +2,13 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
+## [1.2.0] - 2026-04-16
+
+- GitHub-basierte Update-Routine fuer WordPress integriert.
+- Plugin-Informationen fuer den WordPress-Updater auf GitHub-Releases umgestellt.
+- Release-Cache fuer Update-Pruefungen hinzugefuegt.
+- Dokumentation fuer Updates ueber GitHub ergaenzt.
+
 ## [1.1.1] - 2026-04-16
 
 - `CHANGELOG.md` zum Plugin hinzugefuegt.
