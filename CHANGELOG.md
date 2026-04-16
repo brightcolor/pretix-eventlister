@@ -2,10 +2,10 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
-## [1.2.11] - 2026-04-16
+## [1.2.12] - 2026-04-16
 
-- Problematische `upgrader_source_selection`-Logik entfernt, die manuelle Plugin-Updates per WordPress-Upload stoeren konnte.
-- Release-Paket weiterhin als klassisches `7z`-ZIP gebaut.
+- Fruehe, stark vereinfachte `upgrader_source_selection`-Logik hinzugefuegt, die beim Upload-Update gezielt den inneren Plugin-Ordner an WordPress weiterreicht.
+- Keine Ordner-Verschiebungen oder Dateisystem-Eingriffe mehr im Update-Hook.
 
 ## [1.2.6] - 2026-04-16
 

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.2.11
+ * Version: 1.2.12
  * Author: Bright Color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.2.11';
+	const VERSION = '1.2.12';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -31,6 +31,7 @@ final class Pretix_Eventlister {
 		add_action('admin_enqueue_scripts', array($this, 'enqueue_plugin_admin_assets'));
 		add_action('wp_enqueue_scripts', array($this, 'register_assets'));
 		add_action('upgrader_process_complete', array($this, 'handle_upgrader_process_complete'), 10, 2);
+		add_filter('upgrader_source_selection', array($this, 'prefer_plugin_source_directory'), 1, 4);
 		add_filter('pre_set_site_transient_update_plugins', array($this, 'inject_update_information'));
 		add_filter('plugins_api', array($this, 'inject_plugin_information'), 20, 3);
 		add_filter('plugin_row_meta', array($this, 'add_plugin_row_meta'), 10, 4);
@@ -391,6 +392,33 @@ final class Pretix_Eventlister {
 		if (in_array($this->get_plugin_basename(), $options['plugins'], true)) {
 			delete_site_transient(self::GITHUB_RELEASE_CACHE_KEY);
 		}
+	}
+
+	public function prefer_plugin_source_directory($source, $remote_source, $upgrader, $hook_extra) {
+		if (is_wp_error($source)) {
+			return $source;
+		}
+
+		$source = untrailingslashit((string) $source);
+		if (! $source || ! is_dir($source)) {
+			return $source;
+		}
+
+		if ($this->directory_contains_plugin_file($source)) {
+			return $source;
+		}
+
+		$candidates = glob($source . '/*', GLOB_ONLYDIR);
+		if (! is_array($candidates) || 1 !== count($candidates)) {
+			return $source;
+		}
+
+		$candidate = untrailingslashit($candidates[0]);
+		if (! $this->directory_contains_plugin_file($candidate)) {
+			return $source;
+		}
+
+		return $candidate;
 	}
 
 	private function normalize_shortcode_atts($atts, $options) {
@@ -1266,6 +1294,10 @@ final class Pretix_Eventlister {
 
 	private function get_changelog_url() {
 		return trailingslashit(self::GITHUB_REPOSITORY_URL) . 'releases';
+	}
+
+	private function directory_contains_plugin_file($directory) {
+		return is_file(trailingslashit($directory) . self::PLUGIN_SLUG . '.php');
 	}
 
 	private function get_plugin_basename() {
