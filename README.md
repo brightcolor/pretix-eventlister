@@ -4,9 +4,11 @@ WordPress-Plugin zur Darstellung von pretix-Events als moderne, responsive Karte
 
 ## Installation
 
-1. Den Ordner `pretix-eventlister` in `wp-content/plugins/` kopieren.
-2. Das Plugin in WordPress aktivieren.
-3. Unter `Einstellungen > Pretix Eventlister` folgende Werte eintragen:
+1. Fuer WordPress immer die Release-Datei `pretix-eventlister-x.y.z.zip` aus dem GitHub-Release verwenden.
+2. Nicht die GitHub-Datei `Source code (zip)` installieren, da diese fuer Entwickler gedacht ist.
+3. Das ZIP in WordPress unter `Plugins > Installieren > Plugin hochladen` importieren.
+4. Das Plugin in WordPress aktivieren.
+5. Unter `Einstellungen > Pretix Eventlister` folgende Werte eintragen:
    - pretix Basis-URL
    - optional Standard-Veranstalter
    - API-Token
@@ -49,6 +51,7 @@ In den Plugin-Einstellungen kannst du Organizer definieren, bei denen automatisc
 
 Das Plugin kann Updates direkt aus dem GitHub-Repository beziehen.
 Sobald ein neues GitHub-Release mit passender ZIP-Datei veroeffentlicht wird, erkennt WordPress die neue Version automatisch im Plugin-Updater.
+Die Installations- und Update-Routine normalisiert den Plugin-Ordner dabei auf `pretix-eventlister`, damit Aktivierungslinks stabil bleiben.
 
 ## Versionierung
 

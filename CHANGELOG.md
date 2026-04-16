@@ -2,6 +2,12 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
+## [1.2.1] - 2026-04-16
+
+- Installations- und Updatepakete werden nun auf den festen Plugin-Ordner `pretix-eventlister` normalisiert.
+- Aktivierungsfehler wie `Diese Plugindatei existiert nicht` nach GitHub- oder ZIP-Installationen abgesichert.
+- Installationshinweise in der README um den korrekten WordPress-Download aus dem Release erweitert.
+
 ## [1.2.0] - 2026-04-16
 
 - GitHub-basierte Update-Routine fuer WordPress integriert.

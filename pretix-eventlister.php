@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: Codex
  * Text Domain: pretix-eventlister
  * Update URI: https://github.com/brightcolor/pretix-eventlister
@@ -13,7 +13,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.2.0';
+	const VERSION = '1.2.1';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -29,6 +29,7 @@ final class Pretix_Eventlister {
 		add_action('admin_init', array($this, 'register_settings'));
 		add_action('wp_enqueue_scripts', array($this, 'register_assets'));
 		add_action('upgrader_process_complete', array($this, 'handle_upgrader_process_complete'), 10, 2);
+		add_filter('upgrader_source_selection', array($this, 'normalize_package_source'), 10, 4);
 		add_filter('pre_set_site_transient_update_plugins', array($this, 'inject_update_information'));
 		add_filter('plugins_api', array($this, 'inject_plugin_information'), 20, 3);
 		add_shortcode('pretix_events', array($this, 'render_shortcode'));
@@ -354,6 +355,44 @@ final class Pretix_Eventlister {
 		if (in_array($this->get_plugin_basename(), $options['plugins'], true)) {
 			delete_site_transient(self::GITHUB_RELEASE_CACHE_KEY);
 		}
+	}
+
+	public function normalize_package_source($source, $remote_source, $upgrader, $hook_extra) {
+		$plugin_source = $this->locate_plugin_source($source);
+
+		if (! $plugin_source || ! $this->is_target_plugin_upgrade($hook_extra, $plugin_source)) {
+			return $source;
+		}
+
+		$normalized_source = trailingslashit($remote_source) . self::PLUGIN_SLUG;
+
+		if (wp_normalize_path($plugin_source) === wp_normalize_path($normalized_source)) {
+			return $plugin_source;
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+
+		global $wp_filesystem;
+
+		if (! WP_Filesystem()) {
+			return new WP_Error(
+				'pretix_eventlister_upgrade_filesystem',
+				__('Das Dateisystem konnte fuer die Plugin-Aktualisierung nicht initialisiert werden.', 'pretix-eventlister')
+			);
+		}
+
+		if ($wp_filesystem->exists($normalized_source)) {
+			$wp_filesystem->delete($normalized_source, true);
+		}
+
+		if (! $wp_filesystem->move($plugin_source, $normalized_source, true)) {
+			return new WP_Error(
+				'pretix_eventlister_upgrade_source',
+				__('Der Plugin-Ordner konnte waehrend der Aktualisierung nicht in den erwarteten Zielnamen verschoben werden.', 'pretix-eventlister')
+			);
+		}
+
+		return $normalized_source;
 	}
 
 	private function normalize_shortcode_atts($atts, $options) {
@@ -1025,6 +1064,55 @@ final class Pretix_Eventlister {
 
 	private function get_default_platform_notice() {
 		return __('HSP-Events stellt fuer dieses Event ausschliesslich die Ticket- und Plattforminfrastruktur bereit. Veranstalter und Inhalte liegen beim jeweils genannten Anbieter.', 'pretix-eventlister');
+	}
+
+	private function is_target_plugin_upgrade($hook_extra, $plugin_source) {
+		if (! empty($hook_extra['plugin']) && $this->matches_plugin_basename($hook_extra['plugin'])) {
+			return true;
+		}
+
+		if (! empty($hook_extra['plugins']) && is_array($hook_extra['plugins'])) {
+			foreach ($hook_extra['plugins'] as $plugin) {
+				if ($this->matches_plugin_basename($plugin)) {
+					return true;
+				}
+			}
+		}
+
+		return $this->source_contains_main_file($plugin_source);
+	}
+
+	private function matches_plugin_basename($plugin) {
+		$plugin = ltrim(wp_normalize_path((string) $plugin), '/');
+
+		return self::PLUGIN_SLUG . '/' . self::PLUGIN_SLUG . '.php' === $plugin
+			|| self::PLUGIN_SLUG . '.php' === $plugin
+			|| '/' . self::PLUGIN_SLUG . '.php' === substr($plugin, -strlen('/' . self::PLUGIN_SLUG . '.php'));
+	}
+
+	private function locate_plugin_source($source) {
+		$source = untrailingslashit((string) $source);
+
+		if ($this->source_contains_main_file($source)) {
+			return $source;
+		}
+
+		$candidates = glob($source . '/*', GLOB_ONLYDIR);
+		if (! is_array($candidates)) {
+			return '';
+		}
+
+		foreach ($candidates as $candidate) {
+			if ($this->source_contains_main_file($candidate)) {
+				return untrailingslashit($candidate);
+			}
+		}
+
+		return '';
+	}
+
+	private function source_contains_main_file($path) {
+		return file_exists(trailingslashit($path) . self::PLUGIN_SLUG . '.php');
 	}
 
 	private function get_plugin_basename() {
