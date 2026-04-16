@@ -2,6 +2,12 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
+## [1.2.5] - 2026-04-16
+
+- Eventbilder robuster aus pretix-Datenfeldern aufgeloest.
+- Eventbeschreibungen werden jetzt als HTML ausgegeben statt auf reinen Text reduziert.
+- Markdown in Eventbeschreibungen wird vor der Ausgabe in HTML umgewandelt.
+
 ## [1.2.4] - 2026-04-16
 
 - Paket-Normalisierung fuer WordPress-Updates deutlich abgesichert, damit bereits korrekt benannte Plugin-Ordner nicht mehr unnoetig umgebogen werden.

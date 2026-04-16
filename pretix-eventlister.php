@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.2.4
+ * Version: 1.2.5
  * Author: Bright Color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.2.4';
+	const VERSION = '1.2.5';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -870,6 +870,14 @@ final class Pretix_Eventlister {
 	}
 
 	private function extract_image_url($event) {
+		if (! empty($event['image']) && is_string($event['image']) && filter_var($event['image'], FILTER_VALIDATE_URL)) {
+			return esc_url_raw($event['image']);
+		}
+
+		if (! empty($event['image_url']) && is_string($event['image_url']) && filter_var($event['image_url'], FILTER_VALIDATE_URL)) {
+			return esc_url_raw($event['image_url']);
+		}
+
 		if (! empty($event['media']) && is_array($event['media'])) {
 			foreach ($event['media'] as $item) {
 				if (! empty($item['url'])) {
@@ -880,8 +888,20 @@ final class Pretix_Eventlister {
 
 		if (! empty($event['images']) && is_array($event['images'])) {
 			foreach ($event['images'] as $item) {
+				if (! empty($item['url'])) {
+					return esc_url_raw($item['url']);
+				}
+
 				if (! empty($item['image'])) {
 					return esc_url_raw($item['image']);
+				}
+			}
+		}
+
+		if (! empty($event['meta_data']) && is_array($event['meta_data'])) {
+			foreach (array('image', 'image_url', 'featured_image', 'header_image', 'thumbnail') as $key) {
+				if (! empty($event['meta_data'][ $key ]) && is_string($event['meta_data'][ $key ]) && filter_var($event['meta_data'][ $key ], FILTER_VALIDATE_URL)) {
+					return esc_url_raw($event['meta_data'][ $key ]);
 				}
 			}
 		}
@@ -923,14 +943,150 @@ final class Pretix_Eventlister {
 
 	private function resolve_event_description($event) {
 		if (! empty($event['meta_data']['description']) && is_string($event['meta_data']['description'])) {
-			return wp_kses_post($event['meta_data']['description']);
+			return $this->render_event_description_html($event['meta_data']['description']);
 		}
 
 		if (! empty($event['description']) && is_string($event['description'])) {
-			return wp_kses_post($event['description']);
+			return $this->render_event_description_html($event['description']);
 		}
 
 		return '';
+	}
+
+	private function render_event_description_html($content) {
+		$content = trim((string) $content);
+		if ('' === $content) {
+			return '';
+		}
+
+		if ($this->contains_html_markup($content)) {
+			return wp_kses_post(wpautop($content));
+		}
+
+		return wp_kses_post($this->convert_markdown_to_html($content));
+	}
+
+	private function contains_html_markup($content) {
+		return (bool) preg_match('/<[^>]+>/', (string) $content);
+	}
+
+	private function convert_markdown_to_html($markdown) {
+		$markdown = str_replace(array("\r\n", "\r"), "\n", trim((string) $markdown));
+		if ('' === $markdown) {
+			return '';
+		}
+
+		$blocks = preg_split("/\n{2,}/", $markdown);
+		$html_blocks = array();
+
+		foreach ($blocks as $block) {
+			$block = trim($block);
+			if ('' === $block) {
+				continue;
+			}
+
+			$lines = preg_split("/\n/", $block);
+			$first_line = isset($lines[0]) ? trim($lines[0]) : '';
+
+			if (preg_match('/^(#{1,6})\s+(.+)$/', $first_line, $matches)) {
+				$level = min(6, strlen($matches[1]));
+				$html_blocks[] = sprintf('<h%d>%s</h%d>', $level, $this->convert_markdown_inline($matches[2]), $level);
+				continue;
+			}
+
+			if ($this->is_markdown_list($lines)) {
+				$html_blocks[] = $this->convert_markdown_list($lines);
+				continue;
+			}
+
+			if ($this->is_markdown_quote($lines)) {
+				$quote_lines = array();
+				foreach ($lines as $line) {
+					$quote_lines[] = preg_replace('/^\s*>\s?/', '', $line);
+				}
+
+				$html_blocks[] = '<blockquote><p>' . implode('<br>', array_map(array($this, 'convert_markdown_inline'), $quote_lines)) . '</p></blockquote>';
+				continue;
+			}
+
+			$html_blocks[] = '<p>' . implode('<br>', array_map(array($this, 'convert_markdown_inline'), $lines)) . '</p>';
+		}
+
+		return implode("\n", $html_blocks);
+	}
+
+	private function is_markdown_list($lines) {
+		if (empty($lines)) {
+			return false;
+		}
+
+		foreach ($lines as $line) {
+			if (! preg_match('/^\s*(?:[-*+]\s+|\d+\.\s+)/', $line)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private function convert_markdown_list($lines) {
+		$is_ordered = preg_match('/^\s*\d+\.\s+/', isset($lines[0]) ? $lines[0] : '');
+		$tag = $is_ordered ? 'ol' : 'ul';
+		$items = array();
+
+		foreach ($lines as $line) {
+			$item = preg_replace('/^\s*(?:[-*+]\s+|\d+\.\s+)/', '', trim($line));
+			$items[] = '<li>' . $this->convert_markdown_inline($item) . '</li>';
+		}
+
+		return '<' . $tag . '>' . implode('', $items) . '</' . $tag . '>';
+	}
+
+	private function is_markdown_quote($lines) {
+		if (empty($lines)) {
+			return false;
+		}
+
+		foreach ($lines as $line) {
+			if (! preg_match('/^\s*>/', $line)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private function convert_markdown_inline($text) {
+		$text = esc_html((string) $text);
+		$code_tokens = array();
+
+		$text = preg_replace_callback(
+			'/`([^`]+)`/',
+			function ($matches) use (&$code_tokens) {
+				$token = '%%PRETIX_CODE_' . count($code_tokens) . '%%';
+				$code_tokens[ $token ] = '<code>' . $matches[1] . '</code>';
+				return $token;
+			},
+			$text
+		);
+
+		$patterns = array(
+			'/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/' => '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+			'/\*\*(.+?)\*\*/s' => '<strong>$1</strong>',
+			'/__(.+?)__/s' => '<strong>$1</strong>',
+			'/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/s' => '<em>$1</em>',
+			'/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/s' => '<em>$1</em>',
+		);
+
+		foreach ($patterns as $pattern => $replacement) {
+			$text = preg_replace($pattern, $replacement, $text);
+		}
+
+		if (! empty($code_tokens)) {
+			$text = strtr($text, $code_tokens);
+		}
+
+		return $text;
 	}
 
 	private function resolve_text_value($value) {

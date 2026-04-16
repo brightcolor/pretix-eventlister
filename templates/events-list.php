@@ -80,7 +80,7 @@
 
 						<?php if ($show_description && ! empty($event['description'])) : ?>
 							<div class="pretix-eventlister__description">
-								<?php echo esc_html(wp_trim_words(wp_strip_all_tags($event['description']), 30, '...')); ?>
+								<?php echo wp_kses_post($event['description']); ?>
 							</div>
 						<?php endif; ?>
 					</div>
