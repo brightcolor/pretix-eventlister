@@ -2,10 +2,11 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
-## [1.2.12] - 2026-04-16
+## [1.2.13] - 2026-04-16
 
-- Fruehe, stark vereinfachte `upgrader_source_selection`-Logik hinzugefuegt, die beim Upload-Update gezielt den inneren Plugin-Ordner an WordPress weiterreicht.
-- Keine Ordner-Verschiebungen oder Dateisystem-Eingriffe mehr im Update-Hook.
+- Pretix-Hinweise und Zusammenfassung im Frontend-Header entfernt.
+- Button in der Event-Uebersicht auf `Tickets kaufen` umgestellt.
+- Eventbeschreibungen um weitere pretix-Felder und lokalisierte Textwerte erweitert.
 
 ## [1.2.6] - 2026-04-16
 

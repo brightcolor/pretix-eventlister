@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.2.12
+ * Version: 1.2.13
  * Author: Bright Color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.2.12';
+	const VERSION = '1.2.13';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -950,12 +950,42 @@ final class Pretix_Eventlister {
 	}
 
 	private function resolve_event_description($event) {
-		if (! empty($event['meta_data']['description']) && is_string($event['meta_data']['description'])) {
-			return $this->render_event_description_html($event['meta_data']['description']);
+		$candidates = array(
+			isset($event['meta_data']['description']) ? $event['meta_data']['description'] : '',
+			isset($event['meta_data']['event_description']) ? $event['meta_data']['event_description'] : '',
+			isset($event['description']) ? $event['description'] : '',
+			isset($event['body_text']) ? $event['body_text'] : '',
+			isset($event['text']) ? $event['text'] : '',
+			isset($event['content']) ? $event['content'] : '',
+		);
+
+		foreach ($candidates as $candidate) {
+			$resolved = $this->resolve_rich_text_value($candidate);
+			if ('' !== $resolved) {
+				return $this->render_event_description_html($resolved);
+			}
 		}
 
-		if (! empty($event['description']) && is_string($event['description'])) {
-			return $this->render_event_description_html($event['description']);
+		return '';
+	}
+
+	private function resolve_rich_text_value($value) {
+		if (is_string($value)) {
+			return trim($value);
+		}
+
+		if (is_array($value)) {
+			foreach ($this->get_locale_preferences() as $locale) {
+				if (! empty($value[ $locale ]) && is_string($value[ $locale ])) {
+					return trim($value[ $locale ]);
+				}
+			}
+
+			foreach ($value as $item) {
+				if (is_string($item) && '' !== trim($item)) {
+					return trim($item);
+				}
+			}
 		}
 
 		return '';

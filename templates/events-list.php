@@ -8,23 +8,6 @@
  */
 ?>
 <section class="pretix-eventlister-shell">
-	<header class="pretix-eventlister__hero">
-		<div class="pretix-eventlister__hero-copy">
-			<span class="pretix-eventlister__eyebrow"><?php echo esc_html($collection_meta['eyebrow']); ?></span>
-			<h2 class="pretix-eventlister__headline"><?php echo esc_html($collection_meta['title']); ?></h2>
-			<p class="pretix-eventlister__lede"><?php echo esc_html($collection_meta['intro']); ?></p>
-		</div>
-
-		<div class="pretix-eventlister__summary" aria-label="<?php echo esc_attr__('Zusammenfassung', 'pretix-eventlister'); ?>">
-			<?php foreach ($collection_meta['summary_items'] as $summary_item) : ?>
-				<div class="pretix-eventlister__summary-item">
-					<span class="pretix-eventlister__summary-label"><?php echo esc_html($summary_item['label']); ?></span>
-					<strong class="pretix-eventlister__summary-value"><?php echo esc_html($summary_item['value']); ?></strong>
-				</div>
-			<?php endforeach; ?>
-		</div>
-	</header>
-
 	<div class="pretix-eventlister <?php echo esc_attr($layout_class); ?>" data-pretix-events>
 		<?php foreach ($events as $index => $event) : ?>
 			<article class="pretix-eventlister__card<?php echo ! empty($event['platform_notice']) ? ' pretix-eventlister__card--platform' : ''; ?>" style="--pretix-delay: <?php echo esc_attr(($index % 8) * 90); ?>ms;">
@@ -99,7 +82,7 @@
 					<div class="pretix-eventlister__footer">
 						<?php if (! empty($event['url'])) : ?>
 							<a class="pretix-eventlister__button" href="<?php echo esc_url($event['url']); ?>" target="_blank" rel="noopener noreferrer">
-								<?php echo esc_html__('Zum Event', 'pretix-eventlister'); ?>
+								<?php echo esc_html__('Tickets kaufen', 'pretix-eventlister'); ?>
 							</a>
 						<?php endif; ?>
 
