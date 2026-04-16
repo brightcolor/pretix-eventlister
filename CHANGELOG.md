@@ -2,9 +2,9 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
-## [1.2.7] - 2026-04-16
+## [1.2.8] - 2026-04-16
 
-- Release-Paket fuer WordPress neu gebaut, um Installationsprobleme durch Archiv-Metadaten zu vermeiden.
+- Release-Paket fuer WordPress mit normalisierten ZIP-Pfaden neu gebaut, um Installationsprobleme auf Linux-Hosts zu vermeiden.
 
 ## [1.2.6] - 2026-04-16
 
