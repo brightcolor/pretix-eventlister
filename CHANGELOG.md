@@ -2,9 +2,10 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
-## [1.2.10] - 2026-04-16
+## [1.2.11] - 2026-04-16
 
-- Release-Paket fuer WordPress erneut mit einem klassischen ZIP-Tool (`7z`) gebaut, um maximale Kompatibilitaet bei Plugin-Uploads zu erreichen.
+- Problematische `upgrader_source_selection`-Logik entfernt, die manuelle Plugin-Updates per WordPress-Upload stoeren konnte.
+- Release-Paket weiterhin als klassisches `7z`-ZIP gebaut.
 
 ## [1.2.6] - 2026-04-16
 
