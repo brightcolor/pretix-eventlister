@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.2.14
+ * Version: 1.2.15
  * Author: Bright Color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.2.14';
+	const VERSION = '1.2.15';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -714,6 +714,13 @@ final class Pretix_Eventlister {
 			'url' => $this->resolve_public_url($event, $base_url, $organizer_slug),
 			'description' => $this->resolve_event_description($event, $settings),
 			'image' => $this->extract_image_url($event, $settings, $base_url),
+			'button_label' => $this->build_ticket_button_label(
+				$base_url,
+				$api_token,
+				$organizer_slug,
+				! empty($event['slug']) ? $event['slug'] : '',
+				$cache_ttl
+			),
 			'date_from' => $date_from,
 			'date_to' => $date_to,
 			'sort_timestamp' => $date_from ? $date_from : ($date_to ? $date_to : PHP_INT_MAX),
@@ -753,6 +760,34 @@ final class Pretix_Eventlister {
 		set_transient($cache_key, $settings, MINUTE_IN_SECONDS * max(1, $cache_ttl));
 
 		return is_array($settings) ? $settings : array();
+	}
+
+	private function get_event_items($base_url, $api_token, $organizer_slug, $event_slug, $cache_ttl) {
+		$cache_key = self::CACHE_PREFIX . 'items_' . md5($base_url . '|' . $organizer_slug . '|' . $event_slug);
+		$cached = get_transient($cache_key);
+		if (false !== $cached) {
+			return $cached;
+		}
+
+		$items = $this->get_paginated_results(
+			$this->build_api_url(
+				$base_url,
+				sprintf(
+					'api/v1/organizers/%1$s/events/%2$s/items/?active=true',
+					rawurlencode($organizer_slug),
+					rawurlencode($event_slug)
+				)
+			),
+			$api_token
+		);
+
+		if (is_wp_error($items)) {
+			return $items;
+		}
+
+		set_transient($cache_key, $items, MINUTE_IN_SECONDS * max(1, $cache_ttl));
+
+		return is_array($items) ? $items : array();
 	}
 
 	private function get_api_object($url, $api_token) {
@@ -1035,8 +1070,12 @@ final class Pretix_Eventlister {
 	}
 
 	private function resolve_event_description($event, $settings = array()) {
+		$frontpage_text = $this->resolve_rich_text_value(isset($settings['frontpage_text']) ? $settings['frontpage_text'] : '');
+		if ('' !== $frontpage_text) {
+			return $this->render_event_description_html($frontpage_text);
+		}
+
 		$candidates = array(
-			isset($settings['frontpage_text']) ? $settings['frontpage_text'] : '',
 			isset($settings['description']) ? $settings['description'] : '',
 			isset($event['meta_data']['description']) ? $event['meta_data']['description'] : '',
 			isset($event['meta_data']['event_description']) ? $event['meta_data']['event_description'] : '',
@@ -1056,6 +1095,64 @@ final class Pretix_Eventlister {
 		return '';
 	}
 
+	private function build_ticket_button_label($base_url, $api_token, $organizer_slug, $event_slug, $cache_ttl) {
+		if (! $event_slug) {
+			return __('Tickets', 'pretix-eventlister');
+		}
+
+		$items = $this->get_event_items($base_url, $api_token, $organizer_slug, $event_slug, $cache_ttl);
+		if (is_wp_error($items) || empty($items) || ! is_array($items)) {
+			return __('Tickets', 'pretix-eventlister');
+		}
+
+		$lowest_price = null;
+		$currency = '';
+
+		foreach ($items as $item) {
+			if (isset($item['active']) && ! $item['active']) {
+				continue;
+			}
+
+			if (isset($item['admission']) && ! $item['admission']) {
+				continue;
+			}
+
+			$price = isset($item['default_price']) ? $this->normalize_money_value($item['default_price']) : null;
+			if (null === $price) {
+				continue;
+			}
+
+			if (null === $lowest_price || $price < $lowest_price) {
+				$lowest_price = $price;
+				$currency = ! empty($item['default_price_currency']) ? sanitize_text_field($item['default_price_currency']) : '';
+			}
+		}
+
+		if (null === $lowest_price) {
+			return __('Tickets', 'pretix-eventlister');
+		}
+
+		if ((float) $lowest_price <= 0.0) {
+			return __('Tickets kostenlos', 'pretix-eventlister');
+		}
+
+		$formatted_price = $this->format_money($lowest_price);
+		if ('EUR' === strtoupper($currency) || '' === $currency) {
+			return sprintf(
+				/* translators: %s: lowest ticket price */
+				__('Tickets ab %s EUR', 'pretix-eventlister'),
+				$formatted_price
+			);
+		}
+
+		return sprintf(
+			/* translators: 1: lowest ticket price, 2: currency */
+			__('Tickets ab %1$s %2$s', 'pretix-eventlister'),
+			$formatted_price,
+			strtoupper($currency)
+		);
+	}
+
 	private function normalize_media_url($value, $base_url) {
 		$value = trim((string) $value);
 		if ('' === $value) {
@@ -1067,6 +1164,20 @@ final class Pretix_Eventlister {
 		}
 
 		return esc_url_raw(untrailingslashit($base_url) . '/' . ltrim($value, '/'));
+	}
+
+	private function normalize_money_value($value) {
+		if (! is_scalar($value) || '' === trim((string) $value)) {
+			return null;
+		}
+
+		return (float) str_replace(',', '.', (string) $value);
+	}
+
+	private function format_money($amount) {
+		$formatted = number_format_i18n((float) $amount, 2);
+		$formatted = preg_replace('/([,.]00)$/', '', $formatted);
+		return $formatted ? $formatted : '0';
 	}
 
 	private function resolve_rich_text_value($value) {

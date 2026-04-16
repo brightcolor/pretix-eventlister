@@ -82,7 +82,7 @@
 					<div class="pretix-eventlister__footer">
 						<?php if (! empty($event['url'])) : ?>
 							<a class="pretix-eventlister__button" href="<?php echo esc_url($event['url']); ?>" target="_blank" rel="noopener noreferrer">
-								<?php echo esc_html__('Tickets kaufen', 'pretix-eventlister'); ?>
+								<?php echo esc_html(! empty($event['button_label']) ? $event['button_label'] : __('Tickets', 'pretix-eventlister')); ?>
 							</a>
 						<?php endif; ?>
 
