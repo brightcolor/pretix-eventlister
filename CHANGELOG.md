@@ -1,91 +1,97 @@
 # Changelog
 
-Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
+All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
-## [1.3.0] - 2026-04-17
+## [1.3.4] - 2026-04-17
 
-- Alles ist optional schaltbar: neue Feature-Toggles in den Plugin-Einstellungen und per Shortcode/Block ueberschreibbar.
-- Gutenberg-Block `Pretix Events` hinzugefuegt (ServerSideRender im Editor).
-- Frontend-Filter (Veranstalter, Zeitraum, Ort, Suche) sowie optionales `Mehr laden`/Pagination integriert.
-- Badges fuer kostenlos/online/mehrtaegig/demnaechst sowie optional Verfuegbarkeits-Badges (Quotas) hinzugefuegt.
-- Kalender-Links (ICS-Download via WordPress, Google, Outlook) hinzugefuegt.
-- Optionales schema.org/Event Markup (JSON-LD) und optionale Detailansicht als Modal hinzugefuegt.
-- Admin-Tools: API-Verbindung testen und Cache leeren.
-- Optionaler CPT-Sync (Events als Custom Post Type) inkl. Cron-Synchronisierung.
-
-## [1.3.1] - 2026-04-17
-
-- Update-Installation robuster gemacht: der Upgrader findet jetzt den Plugin-Ordner auch dann, wenn das ZIP unerwartet verschachtelt entpackt wird (Fix fuer \"Es wurden keine gueltigen Plugins gefunden\").
-
-## [1.3.2] - 2026-04-17
-
-- Update-Fix: Release-ZIP wird so gebaut, dass WordPress es beim Update sicher als Plugin erkennt (Plugin-Dateien im ZIP-Root) und der Installer erzwingt den Zielordner `pretix-eventlister`.
+- Switched GitHub documentation to English (`README.md`, `CHANGELOG.md`).
+- Updated plugin author naming to lowercase `bright color` (plugin header + plugin details API output).
 
 ## [1.3.3] - 2026-04-17
 
-- Plugin-Details-Fenster gefixt: GitHub-Release-Notes mit escaped Zeilenumbruechen (`\n`) werden jetzt korrekt normalisiert und als Markdown/HTML sauber gerendert.
+- Fixed plugin details modal rendering: GitHub release notes containing escaped newlines (`\n`) are now normalized and rendered properly as Markdown/HTML.
+
+## [1.3.2] - 2026-04-17
+
+- Fixed WordPress update package recognition by shipping release ZIP files in root format.
+- Installer now enforces target directory `pretix-eventlister` for stable install/update behavior.
+
+## [1.3.1] - 2026-04-17
+
+- Improved updater source directory detection for nested extraction scenarios.
+- Prevents update failures with `No valid plugins were found`.
+
+## [1.3.0] - 2026-04-17
+
+- Introduced optional feature toggles (global settings and per shortcode/block override).
+- Added Gutenberg block (`Pretix Events`) with server-side preview.
+- Added frontend filters (organizer, timeframe, location, text search) and optional load more/pagination.
+- Added badges (free, online, multi-day, soon) and optional availability badges.
+- Added calendar actions (`.ics`, Google Calendar, Outlook).
+- Added optional schema.org event markup and optional event detail modal.
+- Added admin tools for API connection test and manual cache flush.
+- Added optional CPT synchronization via cron.
 
 ## [1.2.16] - 2026-04-16
 
-- Pretix-Hinweise und Zusammenfassung im Frontend-Header entfernt.
-- Button in der Event-Uebersicht auf `Tickets ab ...` mit dem guenstigsten Ticketpreis umgestellt.
-- Eventbeschreibungen und Bilder um die pretix-Event-Settings (`frontpage_text`, `logo_image`) aus der Referenz-Implementierung erweitert.
-- Fehlende Methode `get_locale_preferences()` fuer lokalisierte Textfelder ergaenzt.
+- Removed pretix hint/summary header elements from frontend output.
+- Switched primary CTA to lowest-price ticket label (`Tickets ab ...`).
+- Extended event descriptions and images via pretix event settings (`frontpage_text`, `logo_image`).
+- Added missing `get_locale_preferences()` to prevent runtime errors in localized field resolution.
 
 ## [1.2.6] - 2026-04-16
 
-- Hinweis auf Eventkarten hinzugefuegt, in wie vielen Tagen ein Event beginnt.
+- Added event countdown hint (`Starts in X days` equivalent wording for German UI).
 
 ## [1.2.5] - 2026-04-16
 
-- Eventbilder robuster aus pretix-Datenfeldern aufgeloest.
-- Eventbeschreibungen werden jetzt als HTML ausgegeben statt auf reinen Text reduziert.
-- Markdown in Eventbeschreibungen wird vor der Ausgabe in HTML umgewandelt.
+- Improved event image extraction robustness from pretix payloads.
+- Render event descriptions as HTML.
+- Added Markdown-to-HTML conversion for event descriptions.
 
 ## [1.2.4] - 2026-04-16
 
-- Paket-Normalisierung fuer WordPress-Updates deutlich abgesichert, damit bereits korrekt benannte Plugin-Ordner nicht mehr unnoetig umgebogen werden.
-- Release-ZIP um `export-ignore` bereinigt, damit Entwicklungsdateien nicht mehr im Installationspaket landen.
+- Improved package normalization for WordPress updates to avoid unnecessary folder remapping.
+- Excluded development-only files from release ZIP export.
 
 ## [1.2.3] - 2026-04-16
 
-- Author auf Bright Color mit GitHub-Repository-Link umgestellt.
-- Plugin-Icon fuer WordPress-Plugin-Details und die Plugin-Uebersicht hinzugefuegt.
-- GitHub-Repository und Changelog in der Plugin-Uebersicht verlinkt.
+- Updated author to Bright Color and linked GitHub repository.
+- Added plugin icon for WordPress plugin details and plugin list.
+- Added repository and changelog links in plugin row meta.
 
 ## [1.2.2] - 2026-04-16
 
-- Hinweis zu GitHub-Updates von der Plugin-Einstellungsseite entfernt.
+- Removed GitHub update notice from plugin settings page.
 
 ## [1.2.1] - 2026-04-16
 
-- Installations- und Updatepakete werden nun auf den festen Plugin-Ordner `pretix-eventlister` normalisiert.
-- Aktivierungsfehler wie `Diese Plugindatei existiert nicht` nach GitHub- oder ZIP-Installationen abgesichert.
-- Installationshinweise in der README um den korrekten WordPress-Download aus dem Release erweitert.
+- Normalized install/update package paths to fixed plugin folder `pretix-eventlister`.
+- Prevented activation failures like `This plugin file does not exist` after ZIP/GitHub installs.
+- Extended README installation notes for release ZIP usage.
 
 ## [1.2.0] - 2026-04-16
 
-- GitHub-basierte Update-Routine fuer WordPress integriert.
-- Plugin-Informationen fuer den WordPress-Updater auf GitHub-Releases umgestellt.
-- Release-Cache fuer Update-Pruefungen hinzugefuegt.
-- Dokumentation fuer Updates ueber GitHub ergaenzt.
+- Added GitHub-based update routine for WordPress.
+- Wired plugin update metadata to GitHub release data.
+- Added release cache for update checks.
 
 ## [1.1.1] - 2026-04-16
 
-- `CHANGELOG.md` zum Plugin hinzugefuegt.
-- Versionierung im Code auf `1.1.1` angehoben.
-- Asset-Versionen auf eine zentrale Versionskonstante umgestellt.
-- Release-ZIP fuer diese Version erstellt.
+- Added `CHANGELOG.md`.
+- Bumped versioning metadata to `1.1.1`.
+- Unified asset versioning through central plugin constant.
 
 ## [1.1.0] - 2026-04-16
 
-- Modernes Frontend mit Hero-Bereich, Summary-Chips und hochwertiger Kartenansicht umgesetzt.
-- Support fuer alle Veranstalter, einen Veranstalter oder mehrere Veranstalter hinzugefuegt.
-- HSP-Hinweislogik fuer ausgewaehlte Partner-Veranstalter integriert.
-- API-Abfrage um Organizer-Index, Pagination und robustere Event-Normalisierung erweitert.
+- Implemented modern frontend card layout with responsive behavior.
+- Added support for all organizers, single organizer, or multi-organizer selection.
+- Added HSP partner notice logic for selected organizers.
+- Extended API handling with organizer index, pagination, and stronger normalization.
 
 ## [1.0.0] - 2026-04-16
 
-- Erstes Release des Plugins.
-- pretix-Anbindung mit API-Token und Organizer-Slug umgesetzt.
-- Responsive Event-Ausgabe per Shortcode `[pretix_events]` eingefuehrt.
+- Initial release.
+- Added pretix API integration (base URL, token, organizer handling).
+- Added responsive shortcode output via `[pretix_events]`.
+

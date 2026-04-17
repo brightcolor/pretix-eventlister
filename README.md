@@ -1,66 +1,67 @@
 # Pretix Eventlister
 
-WordPress-Plugin zur Darstellung von pretix-Events als moderne, responsive Kartenansicht.
+WordPress plugin for displaying pretix events in a modern, responsive event card layout.
 
 ## Installation
 
-1. Fuer WordPress immer die Release-Datei `pretix-eventlister-x.y.z.zip` aus dem GitHub-Release verwenden.
-2. Nicht die GitHub-Datei `Source code (zip)` installieren, da diese fuer Entwickler gedacht ist.
-3. Das ZIP in WordPress unter `Plugins > Installieren > Plugin hochladen` importieren.
-4. Das Plugin in WordPress aktivieren.
-5. Unter `Einstellungen > Pretix Eventlister` folgende Werte eintragen:
-   - pretix Basis-URL
-   - optional Standard-Veranstalter
-   - API-Token
-   - Cache-Dauer
-   - optional Organizer mit HSP-Hinweis
+1. Always use the release ZIP file `pretix-eventlister-x.y.z.zip` from GitHub Releases.
+2. Do not install GitHub's `Source code (zip)` file, as it is for development only.
+3. In WordPress, go to `Plugins > Add New > Upload Plugin` and upload the ZIP.
+4. Activate the plugin.
+5. Go to `Settings > Pretix Eventlister` and configure:
+   - pretix base URL
+   - optional default organizers
+   - API token
+   - cache TTL
+   - optional HSP partner notice organizers
 
-## Nutzung
+## Usage
 
-Standard-Shortcode:
+Default shortcode:
 
 ```text
 [pretix_events]
 ```
 
-Alternativ im Block-Editor: Block `Pretix Events` einfuegen (unter Widgets).
+Block editor alternative: insert the `Pretix Events` block (Widgets category).
 
-Beispiele:
+Examples:
 
 ```text
 [pretix_events limit="6"]
 [pretix_events scope="all" limit="all"]
 [pretix_events style="list"]
-[pretix_events organizer="mein-organizer" show_description="no"]
-[pretix_events organizers="veranstalter-a,veranstalter-b"]
+[pretix_events organizer="my-organizer" show_description="no"]
+[pretix_events organizers="organizer-a,organizer-b"]
+[pretix_events filters="yes" load_more="yes" page_size="12"]
 ```
 
-## Shortcode-Optionen
+## Shortcode Options
 
-- `limit`: Anzahl der angezeigten Events oder `all`
-- `scope`: `selected` oder `all`
-- `organizer`: optionaler Organizer-Slug fuer diese Ausgabe
-- `organizers`: mehrere Organizer-Slugs, durch Komma getrennt
-- `style`: `default`, `grid`, `list` oder `compact`
-- `show_description`: `default`, `yes` oder `no`
-- `show_organizer`: `default`, `yes` oder `no`
-- `show_image`, `show_time`, `show_location`, `show_countdown`, `show_platform_notice`: jeweils `default|yes|no`
-- `filters`: Frontend-Filter `default|yes|no`
-- `load_more`: Mehr laden / Pagination `default|yes|no`
-- `page_size`: Page-Size fuer `load_more` (Zahl)
-- `badges`, `badges_availability`, `calendar`, `schema`, `modal`, `tilt`: jeweils `default|yes|no`
+- `limit`: Number of events, or `all`
+- `scope`: `selected` or `all`
+- `organizer`: Optional organizer slug for this instance
+- `organizers`: Comma-separated organizer slugs
+- `style`: `default`, `grid`, `list`, `compact`
+- `show_description`: `default`, `yes`, `no`
+- `show_organizer`: `default`, `yes`, `no`
+- `show_image`, `show_time`, `show_location`, `show_countdown`, `show_platform_notice`: `default|yes|no`
+- `filters`: `default|yes|no`
+- `load_more`: `default|yes|no`
+- `page_size`: Number of cards shown initially and per load
+- `badges`, `badges_availability`, `calendar`, `schema`, `modal`, `tilt`: `default|yes|no`
 
-## HSP-Hinweis
+## HSP Partner Notice
 
-In den Plugin-Einstellungen kannst du Organizer definieren, bei denen automatisch ein Hinweis auf jeder Event-Karte angezeigt wird, dass HSP-Events nur die Plattform bzw. Ticketinfrastruktur bereitstellt.
+In plugin settings you can define organizer slugs that show a platform-only notice on event cards, clarifying that HSP-Events provides the platform/ticketing infrastructure only.
 
-## Updates ueber GitHub
+## GitHub Updates
 
-Das Plugin kann Updates direkt aus dem GitHub-Repository beziehen.
-Sobald ein neues GitHub-Release mit passender ZIP-Datei veroeffentlicht wird, erkennt WordPress die neue Version automatisch im Plugin-Updater.
-Die Installations- und Update-Routine normalisiert den Plugin-Ordner dabei auf `pretix-eventlister`, damit Aktivierungslinks stabil bleiben.
+The plugin can update directly from GitHub releases.
+When a new release with a matching ZIP is published, WordPress detects it via the built-in update API integration.
 
-## Versionierung
+## Versioning
 
-Das Plugin verwendet Semantic Versioning im Schema `major.minor.patch`.
-Die Release-Historie findest du in `CHANGELOG.md`.
+This project follows Semantic Versioning (`major.minor.patch`).
+See `CHANGELOG.md` for release history.
+

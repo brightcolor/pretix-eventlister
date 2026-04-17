@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.3.3
- * Author: Bright Color
+ * Version: 1.3.4
+ * Author: bright color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
  * Update URI: https://github.com/brightcolor/pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.3.3';
+	const VERSION = '1.3.4';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -1117,7 +1117,7 @@ final class Pretix_Eventlister {
 			'name' => __('Pretix Eventlister', 'pretix-eventlister'),
 			'slug' => self::PLUGIN_SLUG,
 			'version' => ! empty($release['version']) ? $release['version'] : self::VERSION,
-			'author' => '<a href="' . esc_url(self::GITHUB_REPOSITORY_URL) . '">Bright Color</a>',
+			'author' => '<a href="' . esc_url(self::GITHUB_REPOSITORY_URL) . '">bright color</a>',
 			'author_profile' => esc_url(self::GITHUB_REPOSITORY_URL),
 			'homepage' => esc_url(self::GITHUB_REPOSITORY_URL),
 			'download_link' => ! empty($release['package']) ? $release['package'] : '',
