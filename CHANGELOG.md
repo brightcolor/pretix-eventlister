@@ -13,6 +13,10 @@ Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versionin
 - Admin-Tools: API-Verbindung testen und Cache leeren.
 - Optionaler CPT-Sync (Events als Custom Post Type) inkl. Cron-Synchronisierung.
 
+## [1.3.1] - 2026-04-17
+
+- Update-Installation robuster gemacht: der Upgrader findet jetzt den Plugin-Ordner auch dann, wenn das ZIP unerwartet verschachtelt entpackt wird (Fix fuer \"Es wurden keine gueltigen Plugins gefunden\").
+
 ## [1.2.16] - 2026-04-16
 
 - Pretix-Hinweise und Zusammenfassung im Frontend-Header entfernt.

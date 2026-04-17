@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.3.0
+ * Version: 1.3.1
  * Author: Bright Color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.3.0';
+	const VERSION = '1.3.1';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -1149,16 +1149,55 @@ final class Pretix_Eventlister {
 		}
 
 		$candidates = glob($source . '/*', GLOB_ONLYDIR);
-		if (! is_array($candidates) || 1 !== count($candidates)) {
-			return $source;
+		if (is_array($candidates) && 1 === count($candidates)) {
+			$candidate = untrailingslashit($candidates[0]);
+			if ($this->directory_contains_plugin_file($candidate)) {
+				return $candidate;
+			}
 		}
 
-		$candidate = untrailingslashit($candidates[0]);
-		if (! $this->directory_contains_plugin_file($candidate)) {
-			return $source;
+		$deep_candidate = $this->find_single_plugin_directory($source, 4);
+		return $deep_candidate ? $deep_candidate : $source;
+	}
+
+	private function find_single_plugin_directory($root, $max_depth = 4) {
+		$root = untrailingslashit((string) $root);
+		if (! $root || ! is_dir($root)) {
+			return '';
 		}
 
-		return $candidate;
+		$matches = array();
+
+		try {
+			$iterator = new RecursiveIteratorIterator(
+				new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
+				RecursiveIteratorIterator::SELF_FIRST
+			);
+
+			foreach ($iterator as $item) {
+				if (! $item->isDir()) {
+					continue;
+				}
+
+				$path = untrailingslashit($item->getPathname());
+				$relative = ltrim(str_replace($root, '', $path), DIRECTORY_SEPARATOR);
+				$depth = '' === $relative ? 0 : substr_count($relative, DIRECTORY_SEPARATOR) + 1;
+				if ($depth > $max_depth) {
+					continue;
+				}
+
+				if ($this->directory_contains_plugin_file($path)) {
+					$matches[] = $path;
+					if (count($matches) > 1) {
+						break;
+					}
+				}
+			}
+		} catch (Exception $e) {
+			return '';
+		}
+
+		return 1 === count($matches) ? (string) $matches[0] : '';
 	}
 
 	private function normalize_shortcode_atts($atts, $options) {
