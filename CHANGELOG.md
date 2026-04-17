@@ -2,6 +2,17 @@
 
 Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versioning (`major.minor.patch`) dokumentiert.
 
+## [1.3.0] - 2026-04-17
+
+- Alles ist optional schaltbar: neue Feature-Toggles in den Plugin-Einstellungen und per Shortcode/Block ueberschreibbar.
+- Gutenberg-Block `Pretix Events` hinzugefuegt (ServerSideRender im Editor).
+- Frontend-Filter (Veranstalter, Zeitraum, Ort, Suche) sowie optionales `Mehr laden`/Pagination integriert.
+- Badges fuer kostenlos/online/mehrtaegig/demnaechst sowie optional Verfuegbarkeits-Badges (Quotas) hinzugefuegt.
+- Kalender-Links (ICS-Download via WordPress, Google, Outlook) hinzugefuegt.
+- Optionales schema.org/Event Markup (JSON-LD) und optionale Detailansicht als Modal hinzugefuegt.
+- Admin-Tools: API-Verbindung testen und Cache leeren.
+- Optionaler CPT-Sync (Events als Custom Post Type) inkl. Cron-Synchronisierung.
+
 ## [1.2.16] - 2026-04-16
 
 - Pretix-Hinweise und Zusammenfassung im Frontend-Header entfernt.

@@ -23,6 +23,8 @@ Standard-Shortcode:
 [pretix_events]
 ```
 
+Alternativ im Block-Editor: Block `Pretix Events` einfuegen (unter Widgets).
+
 Beispiele:
 
 ```text
@@ -39,9 +41,14 @@ Beispiele:
 - `scope`: `selected` oder `all`
 - `organizer`: optionaler Organizer-Slug fuer diese Ausgabe
 - `organizers`: mehrere Organizer-Slugs, durch Komma getrennt
-- `style`: `grid` oder `list`
-- `show_description`: `yes` oder `no`
-- `show_organizer`: `yes` oder `no`
+- `style`: `default`, `grid`, `list` oder `compact`
+- `show_description`: `default`, `yes` oder `no`
+- `show_organizer`: `default`, `yes` oder `no`
+- `show_image`, `show_time`, `show_location`, `show_countdown`, `show_platform_notice`: jeweils `default|yes|no`
+- `filters`: Frontend-Filter `default|yes|no`
+- `load_more`: Mehr laden / Pagination `default|yes|no`
+- `page_size`: Page-Size fuer `load_more` (Zahl)
+- `badges`, `badges_availability`, `calendar`, `schema`, `modal`, `tilt`: jeweils `default|yes|no`
 
 ## HSP-Hinweis
 
