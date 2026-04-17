@@ -65,3 +65,8 @@ When a new release with a matching ZIP is published, WordPress detects it via th
 This project follows Semantic Versioning (`major.minor.patch`).
 See `CHANGELOG.md` for release history.
 
+## Localization
+
+- Source descriptions and documentation use English naming.
+- The plugin UI can stay German via the bundled mapping file:
+  - `languages/pretix-eventlister-de_DE.php`

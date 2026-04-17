@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
+## [1.4.0] - 2026-04-17
+
+- Added localization bootstrap (`load_plugin_textdomain`) and a bundled German language file at `languages/pretix-eventlister-de_DE.php`.
+- Switched plugin metadata/source descriptions to English naming while preserving German interface output through the language mapping.
+
 ## [1.3.4] - 2026-04-17
 
 - Switched GitHub documentation to English (`README.md`, `CHANGELOG.md`).
@@ -94,4 +99,3 @@ All notable changes to this project are documented here using Semantic Versionin
 - Initial release.
 - Added pretix API integration (base URL, token, organizer handling).
 - Added responsive shortcode output via `[pretix_events]`.
-

@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Pretix Eventlister
- * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.3.4
+ * Description: Displays pretix events in a modern, responsive WordPress layout.
+ * Version: 1.4.0
  * Author: bright color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.3.4';
+	const VERSION = '1.4.0';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -26,8 +26,10 @@ final class Pretix_Eventlister {
 	const MINIMUM_PHP = '7.4';
 	const CPT = 'pretix_eventlister_event';
 	const CRON_HOOK = 'pretix_eventlister_sync_events';
+	private $inline_translations = array();
 
 	public function __construct() {
+		add_action('plugins_loaded', array($this, 'load_textdomain'));
 		add_action('init', array($this, 'register_blocks'));
 		add_action('init', array($this, 'register_cpt'));
 		add_action('init', array($this, 'register_cron'));
@@ -46,7 +48,44 @@ final class Pretix_Eventlister {
 		add_filter('pre_set_site_transient_update_plugins', array($this, 'inject_update_information'));
 		add_filter('plugins_api', array($this, 'inject_plugin_information'), 20, 3);
 		add_filter('plugin_row_meta', array($this, 'add_plugin_row_meta'), 10, 4);
+		add_filter('gettext', array($this, 'translate_inline_messages'), 20, 3);
 		add_shortcode('pretix_events', array($this, 'render_shortcode'));
+	}
+
+	public function load_textdomain() {
+		load_plugin_textdomain(
+			'pretix-eventlister',
+			false,
+			dirname(plugin_basename(__FILE__)) . '/languages'
+		);
+
+		$locale = function_exists('determine_locale') ? determine_locale() : get_locale();
+		if (! is_string($locale)) {
+			$locale = '';
+		}
+
+		if (0 !== strpos(strtolower($locale), 'de')) {
+			$this->inline_translations = array();
+			return;
+		}
+
+		$file = plugin_dir_path(__FILE__) . 'languages/pretix-eventlister-de_DE.php';
+		if (is_readable($file)) {
+			$map = require $file;
+			$this->inline_translations = is_array($map) ? $map : array();
+		}
+	}
+
+	public function translate_inline_messages($translation, $text, $domain) {
+		if ('pretix-eventlister' !== $domain) {
+			return $translation;
+		}
+
+		if (! is_array($this->inline_translations) || empty($this->inline_translations)) {
+			return $translation;
+		}
+
+		return isset($this->inline_translations[ $text ]) ? $this->inline_translations[ $text ] : $translation;
 	}
 
 	public function force_destination_directory($options) {
@@ -1128,14 +1167,14 @@ final class Pretix_Eventlister {
 			'external' => true,
 			'sections' => array(
 				'description' => wp_kses_post(
-					'<p>' . __('Modernes WordPress-Plugin fuer pretix-Events mit Multi-Organizer-Support, responsiver Kartenansicht und optionalen HSP-Plattform-Hinweisen.', 'pretix-eventlister') . '</p>' .
-					'<p>' . __('Aktualisierungen werden direkt aus den GitHub-Releases dieses Plugins geladen.', 'pretix-eventlister') . '</p>'
+					'<p>' . __('Modern WordPress plugin for pretix events with multi-organizer support, responsive card layouts, and optional HSP platform notices.', 'pretix-eventlister') . '</p>' .
+					'<p>' . __('Updates are delivered directly from this plugin\'s GitHub releases.', 'pretix-eventlister') . '</p>'
 				),
 				'installation' => wp_kses_post(
 					'<ol>' .
-					'<li>' . __('Plugin in WordPress installieren oder aktualisieren.', 'pretix-eventlister') . '</li>' .
-					'<li>' . __('Unter Einstellungen > Pretix Eventlister die pretix-Zugangsdaten hinterlegen.', 'pretix-eventlister') . '</li>' .
-					'<li>' . __('Neue Versionen werden automatisch erkannt, sobald ein GitHub-Release mit ZIP-Datei veroeffentlicht wird.', 'pretix-eventlister') . '</li>' .
+					'<li>' . __('Install or update the plugin in WordPress.', 'pretix-eventlister') . '</li>' .
+					'<li>' . __('Configure your pretix connection under Settings > Pretix Eventlister.', 'pretix-eventlister') . '</li>' .
+					'<li>' . __('New versions are detected automatically once a GitHub release with a ZIP asset is published.', 'pretix-eventlister') . '</li>' .
 					'</ol>'
 				),
 				'changelog' => $this->format_release_notes_for_modal(isset($release['body']) ? $release['body'] : ''),
