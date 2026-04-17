@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Displays pretix events in a modern, responsive WordPress layout.
- * Version: 1.4.0
+ * Version: 1.4.1
  * Author: bright color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.4.0';
+	const VERSION = '1.4.1';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -200,7 +200,7 @@ final class Pretix_Eventlister {
 			'pretix_eventlister_notes',
 			__('Hinweise fuer Partner-Events', 'pretix-eventlister'),
 			function () {
-				echo '<p>' . esc_html__('Fuer bestimmte Veranstalter kann ein Hinweis eingeblendet werden, dass HSP-Events nur die Plattform bereitstellt.', 'pretix-eventlister') . '</p>';
+				echo '<p>' . esc_html__('Fuer bestimmte Veranstalter kann ein Hinweis eingeblendet werden, dass die Plattform nur fuer Ticketing und Infrastruktur bereitgestellt wird.', 'pretix-eventlister') . '</p>';
 			},
 			'pretix-eventlister'
 		);
@@ -266,7 +266,7 @@ final class Pretix_Eventlister {
 			),
 			array(
 				'key' => 'platform_organizers',
-				'label' => __('Organizer mit HSP-Hinweis', 'pretix-eventlister'),
+				'label' => __('Organizer mit Plattform-Hinweis', 'pretix-eventlister'),
 				'section' => 'pretix_eventlister_notes',
 				'type' => 'textarea',
 				'rows' => 3,
@@ -333,13 +333,13 @@ final class Pretix_Eventlister {
 			),
 			array(
 				'key' => 'show_countdown',
-				'label' => __('Countdown \"Beginnt in X Tagen\" anzeigen', 'pretix-eventlister'),
+				'label' => __('Countdown "Beginnt in X Tagen" anzeigen', 'pretix-eventlister'),
 				'section' => 'pretix_eventlister_display',
 				'type' => 'checkbox',
 			),
 			array(
 				'key' => 'show_platform_notice',
-				'label' => __('HSP-Plattform-Hinweis anzeigen', 'pretix-eventlister'),
+				'label' => __('Plattform-Hinweis anzeigen', 'pretix-eventlister'),
 				'section' => 'pretix_eventlister_display',
 				'type' => 'checkbox',
 			),
@@ -358,7 +358,7 @@ final class Pretix_Eventlister {
 			),
 			array(
 				'key' => 'show_ticket_price',
-				'label' => __('Ticketpreis im Button anzeigen (\"Tickets ab ...\")', 'pretix-eventlister'),
+				'label' => __('Ticketpreis im Button anzeigen ("Tickets ab ...")', 'pretix-eventlister'),
 				'section' => 'pretix_eventlister_display',
 				'type' => 'checkbox',
 			),
@@ -370,13 +370,13 @@ final class Pretix_Eventlister {
 			),
 			array(
 				'key' => 'feature_load_more',
-				'label' => __('Pagination / \"Mehr laden\" aktivieren', 'pretix-eventlister'),
+				'label' => __('Pagination / "Mehr laden" aktivieren', 'pretix-eventlister'),
 				'section' => 'pretix_eventlister_display',
 				'type' => 'checkbox',
 			),
 			array(
 				'key' => 'page_size',
-				'label' => __('Page-Size fuer \"Mehr laden\"', 'pretix-eventlister'),
+				'label' => __('Page-Size fuer "Mehr laden"', 'pretix-eventlister'),
 				'section' => 'pretix_eventlister_display',
 				'type' => 'number',
 				'min' => 1,
@@ -398,7 +398,7 @@ final class Pretix_Eventlister {
 			),
 			array(
 				'key' => 'feature_calendar',
-				'label' => __('\"In Kalender\" Links (ICS, Google, Outlook)', 'pretix-eventlister'),
+				'label' => __('"In Kalender" Links (ICS, Google, Outlook)', 'pretix-eventlister'),
 				'section' => 'pretix_eventlister_display',
 				'type' => 'checkbox',
 			),
@@ -458,7 +458,7 @@ final class Pretix_Eventlister {
 				'section' => 'pretix_eventlister_cpt',
 				'type' => 'textarea',
 				'rows' => 3,
-				'description' => __('Wenn CPT-Scope = \"Nur ausgewaehlte Veranstalter\": hier Slugs angeben (Komma oder Zeilenumbruch). Leer = Standard-Veranstalter.', 'pretix-eventlister'),
+				'description' => __('Wenn CPT-Scope = "Nur ausgewaehlte Veranstalter": hier Slugs angeben (Komma oder Zeilenumbruch). Leer = Standard-Veranstalter.', 'pretix-eventlister'),
 			),
 			array(
 				'key' => 'cpt_sync_interval',
@@ -655,8 +655,8 @@ final class Pretix_Eventlister {
 			<ul>
 				<li><code>[pretix_events]</code></li>
 				<li><code>[pretix_events scope="all" limit="all"]</code></li>
-				<li><code>[pretix_events organizer="hsp-events"]</code></li>
-				<li><code>[pretix_events organizers="hsp-events,partner-a,partner-b"]</code></li>
+				<li><code>[pretix_events organizer="organizer-a"]</code></li>
+				<li><code>[pretix_events organizers="organizer-a,partner-a,partner-b"]</code></li>
 				<li><code>[pretix_events scope="all" style="list" show_description="no"]</code></li>
 				<li><code>[pretix_events filters="yes" load_more="yes" page_size="12"]</code></li>
 			</ul>
@@ -1167,7 +1167,7 @@ final class Pretix_Eventlister {
 			'external' => true,
 			'sections' => array(
 				'description' => wp_kses_post(
-					'<p>' . __('Modern WordPress plugin for pretix events with multi-organizer support, responsive card layouts, and optional HSP platform notices.', 'pretix-eventlister') . '</p>' .
+					'<p>' . __('Modern WordPress plugin for pretix events with multi-organizer support, responsive card layouts, and optional partner platform notices.', 'pretix-eventlister') . '</p>' .
 					'<p>' . __('Updates are delivered directly from this plugin\'s GitHub releases.', 'pretix-eventlister') . '</p>'
 				),
 				'installation' => wp_kses_post(
@@ -1938,7 +1938,7 @@ final class Pretix_Eventlister {
 		if ($has_platform_notes) {
 			$summary_items[] = array(
 				'label' => __('Hinweis', 'pretix-eventlister'),
-				'value' => __('HSP-Plattform bei Partner-Events', 'pretix-eventlister'),
+				'value' => __('Plattform-Hinweis bei Partner-Events', 'pretix-eventlister'),
 			);
 		}
 
@@ -2769,7 +2769,7 @@ final class Pretix_Eventlister {
 	}
 
 	private function get_default_platform_notice() {
-		return __('HSP-Events stellt fuer dieses Event ausschliesslich die Ticket- und Plattforminfrastruktur bereit. Veranstalter und Inhalte liegen beim jeweils genannten Anbieter.', 'pretix-eventlister');
+		return __('Die Plattform stellt fuer dieses Event ausschliesslich die Ticket- und Infrastrukturfunktionen bereit. Veranstalter und Inhalte liegen beim jeweils genannten Anbieter.', 'pretix-eventlister');
 	}
 
 	private function get_plugin_icon_url() {

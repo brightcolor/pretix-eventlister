@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
+## [1.4.1] - 2026-04-18
+
+- Fixed escaped quotation marks in German settings labels (removed literal backslashes such as `\"` in visible UI text).
+- Replaced HSP-specific wording with generalized partner/platform wording in frontend and settings UI.
+- Updated German language mapping for partner platform terminology.
+
 ## [1.4.0] - 2026-04-17
 
 - Added localization bootstrap (`load_plugin_textdomain`) and a bundled German language file at `languages/pretix-eventlister-de_DE.php`.

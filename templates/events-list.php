@@ -115,7 +115,7 @@ ksort($organizer_options);
 						<?php endif; ?>
 
 						<?php if ($show_platform_notice && ! empty($event['platform_notice'])) : ?>
-							<span class="pretix-eventlister__chip pretix-eventlister__chip--accent"><?php echo esc_html__('HSP Plattform', 'pretix-eventlister'); ?></span>
+							<span class="pretix-eventlister__chip pretix-eventlister__chip--accent"><?php echo esc_html__('Partner-Plattform', 'pretix-eventlister'); ?></span>
 						<?php endif; ?>
 
 						<?php if ($feature_badges && ! empty($event['badges']) && is_array($event['badges'])) : ?>
@@ -180,7 +180,7 @@ ksort($organizer_options);
 
 					<?php if ($show_platform_notice && ! empty($event['platform_notice'])) : ?>
 						<div class="pretix-eventlister__platform-note">
-							<span class="pretix-eventlister__platform-label"><?php echo esc_html__('Hinweis zu HSP-Events', 'pretix-eventlister'); ?></span>
+							<span class="pretix-eventlister__platform-label"><?php echo esc_html__('Hinweis zum Veranstalter', 'pretix-eventlister'); ?></span>
 							<p><?php echo esc_html($event['platform_notice']); ?></p>
 						</div>
 					<?php endif; ?>
@@ -236,7 +236,7 @@ ksort($organizer_options);
 									<?php endif; ?>
 									<?php if ($show_platform_notice && ! empty($event['platform_notice'])) : ?>
 										<div class="pretix-eventlister__platform-note">
-											<span class="pretix-eventlister__platform-label"><?php echo esc_html__('Hinweis zu HSP-Events', 'pretix-eventlister'); ?></span>
+											<span class="pretix-eventlister__platform-label"><?php echo esc_html__('Hinweis zum Veranstalter', 'pretix-eventlister'); ?></span>
 											<p><?php echo esc_html($event['platform_notice']); ?></p>
 										</div>
 									<?php endif; ?>
