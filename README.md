@@ -50,6 +50,7 @@ Examples:
 - `load_more`: `default|yes|no`
 - `page_size`: Number of cards shown initially and per load
 - `badges`, `badges_availability`, `calendar`, `schema`, `modal`, `tilt`: `default|yes|no`
+- `show_available_tickets`: `default|yes|no`
 
 ## HSP Partner Notice
 
@@ -70,3 +71,4 @@ See `CHANGELOG.md` for release history.
 - Source descriptions and documentation use English naming.
 - The plugin UI can stay German via the bundled mapping file:
   - `languages/pretix-eventlister-de_DE.php`
+- Low stock behavior is configurable in plugin settings (`low_ticket_threshold`).

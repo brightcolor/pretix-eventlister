@@ -355,6 +355,22 @@
 	padding: 0.35rem 0.75rem;
 }
 
+.pretix-eventlister__availability {
+	background: rgba(21, 33, 40, 0.08);
+	border-radius: 999px;
+	color: #1f2f37;
+	display: inline-flex;
+	font-size: 0.82rem;
+	font-weight: 700;
+	margin: 0.55rem 0 0;
+	padding: 0.35rem 0.75rem;
+}
+
+.pretix-eventlister__availability--soldout {
+	background: rgba(200, 82, 71, 0.14);
+	color: #983a32;
+}
+
 .pretix-eventlister__body {
 	display: grid;
 	gap: 0.85rem;

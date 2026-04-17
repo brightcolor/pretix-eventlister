@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
+## [1.5.0] - 2026-04-18
+
+- Added per-event available ticket output based on pretix quota availability.
+- Added backend settings for:
+  - showing available tickets in event cards
+  - configuring the low-stock threshold used for the `Wenige Tickets` hint
+- Added backend event preview table with useful fetched API details (organizer, date/time, location, availability, price, status, IDs, links).
+
 ## [1.4.1] - 2026-04-18
 
 - Fixed escaped quotation marks in German settings labels (removed literal backslashes such as `\"` in visible UI text).

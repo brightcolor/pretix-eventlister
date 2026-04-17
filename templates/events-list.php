@@ -15,6 +15,7 @@
  * @var bool   $feature_load_more
  * @var int    $page_size
  * @var bool   $feature_badges
+ * @var bool   $show_available_tickets
  * @var bool   $feature_calendar
  * @var bool   $feature_schema
  * @var bool   $feature_modal
@@ -164,6 +165,22 @@ ksort($organizer_options);
 
 							<?php if ($show_countdown && ! empty($event['countdown_label'])) : ?>
 								<p class="pretix-eventlister__countdown"><?php echo esc_html($event['countdown_label']); ?></p>
+							<?php endif; ?>
+
+							<?php if ($show_available_tickets) : ?>
+								<?php if (! empty($event['sold_out'])) : ?>
+									<p class="pretix-eventlister__availability pretix-eventlister__availability--soldout"><?php echo esc_html__('Ausverkauft', 'pretix-eventlister'); ?></p>
+								<?php elseif (isset($event['available_tickets']) && null !== $event['available_tickets']) : ?>
+									<p class="pretix-eventlister__availability">
+										<?php
+										printf(
+											/* translators: %d: number of tickets currently available */
+											esc_html__('Verfuegbar: %d Tickets', 'pretix-eventlister'),
+											(int) $event['available_tickets']
+										);
+										?>
+									</p>
+								<?php endif; ?>
 							<?php endif; ?>
 						</div>
 					</div>

@@ -141,6 +141,11 @@
 							onChange: function ( value ) { setAttrs( { badges_availability: value } ); },
 						} ),
 						yesNoDefaultControl( {
+							label: __( 'Verfuegbare Tickets anzeigen', 'pretix-eventlister' ),
+							value: attrs.show_available_tickets,
+							onChange: function ( value ) { setAttrs( { show_available_tickets: value } ); },
+						} ),
+						yesNoDefaultControl( {
 							label: __( 'Kalender-Links', 'pretix-eventlister' ),
 							value: attrs.calendar,
 							onChange: function ( value ) { setAttrs( { calendar: value } ); },
@@ -175,4 +180,3 @@
 		},
 	} );
 } )( window.wp.blocks, window.wp.element, window.wp.i18n, window.wp.components, window.wp.blockEditor, window.wp.serverSideRender );
-
