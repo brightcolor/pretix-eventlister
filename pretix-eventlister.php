@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.3.2
+ * Version: 1.3.3
  * Author: Bright Color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.3.2';
+	const VERSION = '1.3.3';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -2627,7 +2627,16 @@ final class Pretix_Eventlister {
 			);
 		}
 
-		return wp_kses_post(wpautop(esc_html($notes)));
+		$notes = trim((string) $notes);
+		// Some release notes arrive with escaped newline sequences like "\n".
+		$notes = preg_replace('/\\\\r\\\\n|\\\\n|\\\\r/', "\n", $notes);
+		$notes = str_replace(array('\\"', "\\'"), array('"', "'"), $notes);
+
+		if ($this->contains_html_markup($notes)) {
+			return wp_kses_post(wpautop($notes));
+		}
+
+		return wp_kses_post($this->convert_markdown_to_html($notes));
 	}
 
 	private function sanitize_slug_list($value) {
