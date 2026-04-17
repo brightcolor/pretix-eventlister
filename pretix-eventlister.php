@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Listet Events einer pretix-Instanz modern und responsiv in WordPress auf.
- * Version: 1.3.1
+ * Version: 1.3.2
  * Author: Bright Color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.3.1';
+	const VERSION = '1.3.2';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -42,10 +42,40 @@ final class Pretix_Eventlister {
 		add_action('wp_enqueue_scripts', array($this, 'register_assets'));
 		add_action('upgrader_process_complete', array($this, 'handle_upgrader_process_complete'), 10, 2);
 		add_filter('upgrader_source_selection', array($this, 'prefer_plugin_source_directory'), 1, 4);
+		add_filter('upgrader_package_options', array($this, 'force_destination_directory'), 1);
 		add_filter('pre_set_site_transient_update_plugins', array($this, 'inject_update_information'));
 		add_filter('plugins_api', array($this, 'inject_plugin_information'), 20, 3);
 		add_filter('plugin_row_meta', array($this, 'add_plugin_row_meta'), 10, 4);
 		add_shortcode('pretix_events', array($this, 'render_shortcode'));
+	}
+
+	public function force_destination_directory($options) {
+		if (! is_array($options)) {
+			return $options;
+		}
+
+		if (empty($options['destination']) || ! is_string($options['destination'])) {
+			return $options;
+		}
+
+		$is_plugin_operation = isset($options['hook_extra']['type']) && 'plugin' === $options['hook_extra']['type'];
+		$is_our_plugin_update = isset($options['hook_extra']['plugin']) && $this->get_plugin_basename() === $options['hook_extra']['plugin'];
+
+		$package = isset($options['package']) && is_string($options['package']) ? $options['package'] : '';
+		$is_our_package = $package && (
+			false !== stripos($package, 'pretix-eventlister') ||
+			false !== stripos($package, self::GITHUB_REPOSITORY)
+		);
+
+		if (! $is_our_plugin_update && ! ($is_plugin_operation && $is_our_package)) {
+			return $options;
+		}
+
+		// Ensures root-style ZIPs still install into /wp-content/plugins/pretix-eventlister/.
+		$options['destination_name'] = self::PLUGIN_SLUG;
+		$options['abort_if_destination_exists'] = false;
+
+		return $options;
 	}
 
 	public function register_blocks() {

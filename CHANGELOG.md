@@ -17,6 +17,10 @@ Alle relevanten Aenderungen an diesem Plugin werden hier nach Semantic Versionin
 
 - Update-Installation robuster gemacht: der Upgrader findet jetzt den Plugin-Ordner auch dann, wenn das ZIP unerwartet verschachtelt entpackt wird (Fix fuer \"Es wurden keine gueltigen Plugins gefunden\").
 
+## [1.3.2] - 2026-04-17
+
+- Update-Fix: Release-ZIP wird so gebaut, dass WordPress es beim Update sicher als Plugin erkennt (Plugin-Dateien im ZIP-Root) und der Installer erzwingt den Zielordner `pretix-eventlister`.
+
 ## [1.2.16] - 2026-04-16
 
 - Pretix-Hinweise und Zusammenfassung im Frontend-Header entfernt.
