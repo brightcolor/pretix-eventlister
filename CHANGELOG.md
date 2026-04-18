@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
+## [1.6.2] - 2026-04-18
+
+- Fixed release ZIP packaging format: archive entries now use POSIX-style paths (`/`) so Linux/WordPress extraction creates real directories instead of backslash-named files.
+- This resolves broken installs/updates caused by malformed ZIP internal paths.
+
 ## [1.6.1] - 2026-04-18
 
 - Added robust installer/update path normalization for uploaded ZIP files to enforce the canonical plugin directory `pretix-eventlister`.
