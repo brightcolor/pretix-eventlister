@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Displays pretix events in a modern, responsive WordPress layout.
- * Version: 1.8.0
+ * Version: 1.9.0
  * Author: bright color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.8.0';
+	const VERSION = '1.9.0';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -824,6 +824,7 @@ final class Pretix_Eventlister {
 		$tabs = array(
 			'connection' => __('Verbindung', 'pretix-eventlister'),
 			'display' => __('Anzeige', 'pretix-eventlister'),
+			'generator' => __('Shortcode-Generator', 'pretix-eventlister'),
 			'sync' => __('Sync & Overrides', 'pretix-eventlister'),
 			'tools' => __('Tools', 'pretix-eventlister'),
 		);
@@ -835,9 +836,11 @@ final class Pretix_Eventlister {
 		$tab_sections = array(
 			'connection' => array('pretix_eventlister_api', 'pretix_eventlister_notes', 'pretix_eventlister_visibility'),
 			'display' => array('pretix_eventlister_display'),
+			'generator' => array(),
 			'sync' => array('pretix_eventlister_cpt'),
 			'tools' => array('pretix_eventlister_tools'),
 		);
+		$current_sections = isset($tab_sections[ $active_tab ]) ? $tab_sections[ $active_tab ] : array();
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html__('Pretix Eventlister', 'pretix-eventlister'); ?></h1>
@@ -856,13 +859,15 @@ final class Pretix_Eventlister {
 					<a href="<?php echo esc_url($tab_url); ?>" class="nav-tab<?php echo $active_tab === $tab_key ? ' nav-tab-active' : ''; ?>"><?php echo esc_html($tab_label); ?></a>
 				<?php endforeach; ?>
 			</h2>
-			<form action="options.php" method="post">
-				<?php
-				settings_fields('pretix_eventlister');
-				$this->render_settings_sections_by_ids('pretix-eventlister', isset($tab_sections[ $active_tab ]) ? $tab_sections[ $active_tab ] : array());
-				submit_button();
-				?>
-			</form>
+			<?php if (! empty($current_sections)) : ?>
+				<form action="options.php" method="post">
+					<?php
+					settings_fields('pretix_eventlister');
+					$this->render_settings_sections_by_ids('pretix-eventlister', $current_sections);
+					submit_button();
+					?>
+				</form>
+			<?php endif; ?>
 
 			<?php if ('display' === $active_tab) : ?>
 				<h2><?php echo esc_html__('Shortcode-Beispiele', 'pretix-eventlister'); ?></h2>
@@ -874,6 +879,8 @@ final class Pretix_Eventlister {
 					<li><code>[pretix_events scope="all" style="list" show_description="no"]</code></li>
 					<li><code>[pretix_events filters="yes" load_more="yes" page_size="12"]</code></li>
 				</ul>
+			<?php endif; ?>
+			<?php if ('generator' === $active_tab) : ?>
 				<?php $this->render_shortcode_generator(); ?>
 			<?php endif; ?>
 		</div>
@@ -936,11 +943,31 @@ final class Pretix_Eventlister {
 			'tilt' => 'default',
 		);
 		?>
-		<div class="card" style="max-width:100%;padding:16px 18px;margin-top:16px;">
-			<h2 style="margin-top:0;"><?php echo esc_html__('Shortcode-Generator', 'pretix-eventlister'); ?></h2>
-			<p><?php echo esc_html__('Stelle alle Optionen ein und kopiere den fertigen Shortcode.', 'pretix-eventlister'); ?></p>
+		<style>
+			.pel-gen{--pel-ink:#0f172a;--pel-muted:#475569;--pel-accent:#0b5fff;--pel-bg:#f8fafc;--pel-border:#dbe3ee;background:linear-gradient(135deg,#f8fbff,#f5f8ff 45%,#eef4ff);border:1px solid var(--pel-border);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(11,95,255,.08)}
+			.pel-gen h2{margin:0 0 6px;color:var(--pel-ink)}
+			.pel-gen p{margin:0;color:var(--pel-muted)}
+			.pel-gen__toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+			.pel-gen__preset{border:1px solid #bfdbfe;background:#fff;color:#1d4ed8;padding:6px 10px;border-radius:999px;cursor:pointer;font-weight:600}
+			.pel-gen__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 14px}
+			.pel-gen label{display:block;color:#1e293b;font-weight:600}
+			.pel-gen input,.pel-gen select{width:100%;margin-top:4px}
+			.pel-gen__toggles{margin-top:10px;padding:12px;border:1px solid var(--pel-border);border-radius:12px;background:#fff}
+			.pel-gen__toggles h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#334155}
+			.pel-gen__chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+			.pel-gen__output{margin-top:12px;padding:10px;border:1px solid var(--pel-border);border-radius:12px;background:#fff}
+			.pel-gen__actions{display:flex;gap:8px;align-items:center;margin-top:8px}
+		</style>
+		<div class="pel-gen">
+			<h2><?php echo esc_html__('Shortcode-Generator', 'pretix-eventlister'); ?></h2>
+			<p><?php echo esc_html__('Konfiguriere den Block wie im Builder und kopiere den fertigen Shortcode.', 'pretix-eventlister'); ?></p>
+			<div class="pel-gen__toolbar">
+				<button type="button" class="pel-gen__preset" data-preset="minimal"><?php echo esc_html__('Preset: Minimal', 'pretix-eventlister'); ?></button>
+				<button type="button" class="pel-gen__preset" data-preset="cards"><?php echo esc_html__('Preset: Karten', 'pretix-eventlister'); ?></button>
+				<button type="button" class="pel-gen__preset" data-preset="full"><?php echo esc_html__('Preset: Voll', 'pretix-eventlister'); ?></button>
+			</div>
 
-			<div id="pretix-shortcode-generator" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 14px;">
+			<div id="pretix-shortcode-generator" class="pel-gen__grid">
 				<label><?php echo esc_html__('Scope', 'pretix-eventlister'); ?><br>
 					<select data-opt="scope">
 						<option value="selected" <?php selected('selected', $defaults['scope']); ?>>selected</option>
@@ -949,9 +976,6 @@ final class Pretix_Eventlister {
 				</label>
 				<label><?php echo esc_html__('Limit', 'pretix-eventlister'); ?><br>
 					<input type="text" value="<?php echo esc_attr($defaults['limit']); ?>" data-opt="limit" />
-				</label>
-				<label style="grid-column:1/-1;"><?php echo esc_html__('Organizers (comma separated slugs)', 'pretix-eventlister'); ?><br>
-					<input type="text" class="regular-text" style="width:100%;max-width:680px;" value="<?php echo esc_attr($defaults['organizers']); ?>" data-opt="organizers" />
 				</label>
 				<label><?php echo esc_html__('Style', 'pretix-eventlister'); ?><br>
 					<select data-opt="style">
@@ -964,38 +988,44 @@ final class Pretix_Eventlister {
 				<label><?php echo esc_html__('Page size', 'pretix-eventlister'); ?><br>
 					<input type="number" min="1" value="<?php echo esc_attr($defaults['page_size']); ?>" data-opt="page_size" />
 				</label>
-				<?php
-				$toggle_fields = array(
-					'show_description', 'show_organizer', 'show_image', 'show_time', 'show_location',
-					'show_countdown', 'show_platform_notice', 'show_organizer_slug', 'show_ticket_button',
-					'show_ticket_price', 'filters', 'load_more', 'badges', 'badges_availability',
-					'show_available_tickets', 'calendar', 'schema', 'modal', 'tilt',
-				);
-				foreach ($toggle_fields as $field) :
-					?>
-					<label><?php echo esc_html($field); ?><br>
-						<select data-opt="<?php echo esc_attr($field); ?>">
-							<option value="default">default</option>
-							<option value="yes">yes</option>
-							<option value="no">no</option>
-						</select>
-					</label>
-				<?php endforeach; ?>
+				<label style="grid-column:1/-1;"><?php echo esc_html__('Organizers (comma separated slugs)', 'pretix-eventlister'); ?><br>
+					<input type="text" class="regular-text" style="width:100%;max-width:680px;" value="<?php echo esc_attr($defaults['organizers']); ?>" data-opt="organizers" />
+				</label>
 			</div>
-
-			<div style="margin-top:14px;">
+			<div class="pel-gen__toggles">
+				<h3><?php echo esc_html__('Optionen', 'pretix-eventlister'); ?></h3>
+				<div class="pel-gen__chips">
+					<?php
+					$toggle_fields = array(
+						'show_description', 'show_organizer', 'show_image', 'show_time', 'show_location',
+						'show_countdown', 'show_platform_notice', 'show_organizer_slug', 'show_ticket_button',
+						'show_ticket_price', 'filters', 'load_more', 'badges', 'badges_availability',
+						'show_available_tickets', 'calendar', 'schema', 'modal', 'tilt',
+					);
+					foreach ($toggle_fields as $field) :
+						?>
+						<label><?php echo esc_html($field); ?>
+							<select data-opt="<?php echo esc_attr($field); ?>">
+								<option value="default">default</option>
+								<option value="yes">yes</option>
+								<option value="no">no</option>
+							</select>
+						</label>
+					<?php endforeach; ?>
+				</div>
+			</div>
+			<div style="margin-top:12px;">
 				<label style="display:inline-flex;align-items:center;gap:8px;">
 					<input type="checkbox" id="pretix-shortcode-all-opts" checked />
 					<?php echo esc_html__('Immer alle Optionen ausgeben', 'pretix-eventlister'); ?>
 				</label>
 			</div>
-
-			<div style="margin-top:10px;">
-				<textarea id="pretix-shortcode-output" readonly rows="4" style="width:100%;max-width:900px;font-family:ui-monospace,Consolas,monospace;"></textarea>
+			<div class="pel-gen__output">
+				<textarea id="pretix-shortcode-output" readonly rows="4" style="width:100%;font-family:ui-monospace,Consolas,monospace;"></textarea>
 			</div>
-			<p style="margin-top:8px;">
+			<div class="pel-gen__actions">
 				<button type="button" class="button button-primary" id="pretix-shortcode-copy"><?php echo esc_html__('Shortcode kopieren', 'pretix-eventlister'); ?></button>
-			</p>
+			</div>
 		</div>
 		<script>
 			(function(){
@@ -1003,6 +1033,7 @@ final class Pretix_Eventlister {
 				const output=document.getElementById('pretix-shortcode-output');
 				const copyBtn=document.getElementById('pretix-shortcode-copy');
 				const includeAll=document.getElementById('pretix-shortcode-all-opts');
+				const presetButtons=Array.from(document.querySelectorAll('.pel-gen__preset'));
 				if(!root||!output||!copyBtn||!includeAll){return;}
 
 				const defaultMap=<?php echo wp_json_encode($defaults); ?>;
@@ -1027,6 +1058,22 @@ final class Pretix_Eventlister {
 					output.value='[pretix_events'+(attrs.length?' '+attrs.join(' '):'')+']';
 				}
 
+				function setPreset(name){
+					const map={
+						minimal:{show_description:'no',show_image:'no',show_time:'yes',show_location:'yes',badges:'no',modal:'no',calendar:'no',filters:'no'},
+						cards:{show_description:'yes',show_image:'yes',show_time:'yes',show_location:'yes',badges:'yes',modal:'yes',calendar:'no',filters:'no'},
+						full:{show_description:'yes',show_image:'yes',show_time:'yes',show_location:'yes',badges:'yes',badges_availability:'yes',show_available_tickets:'yes',calendar:'yes',modal:'yes',filters:'yes',load_more:'yes'}
+					};
+					const preset=map[name]||{};
+					fields.forEach((field)=>{
+						const key=field.getAttribute('data-opt');
+						if(key&&Object.prototype.hasOwnProperty.call(preset,key)){
+							field.value=String(preset[key]);
+						}
+					});
+					build();
+				}
+
 				fields.forEach((f)=>f.addEventListener('input',build));
 				fields.forEach((f)=>f.addEventListener('change',build));
 				includeAll.addEventListener('change',build);
@@ -1039,6 +1086,9 @@ final class Pretix_Eventlister {
 						output.focus();
 						output.select();
 					}
+				});
+				presetButtons.forEach((btn)=>{
+					btn.addEventListener('click',()=>setPreset(btn.getAttribute('data-preset')));
 				});
 				build();
 			})();

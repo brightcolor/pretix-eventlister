@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
+## [1.9.0] - 2026-04-18
+
+- Moved the shortcode generator into its own dedicated backend tab.
+- Redesigned the shortcode generator UI with a modern card layout, grouped controls, quick presets, and improved copy workflow.
+
 ## [1.8.0] - 2026-04-18
 
 - Added a backend shortcode generator with comprehensive option controls and one-click copy.
