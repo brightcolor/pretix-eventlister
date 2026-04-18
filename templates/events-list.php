@@ -60,8 +60,8 @@ ksort($organizer_options);
 					<select class="pretix-eventlister__filter-control" data-filter="timeframe">
 						<option value=""><?php echo esc_html__('Alle', 'pretix-eventlister'); ?></option>
 						<option value="today"><?php echo esc_html__('Heute', 'pretix-eventlister'); ?></option>
-						<option value="7"><?php echo esc_html__('Naechste 7 Tage', 'pretix-eventlister'); ?></option>
-						<option value="30"><?php echo esc_html__('Naechste 30 Tage', 'pretix-eventlister'); ?></option>
+						<option value="7"><?php echo esc_html__('Nächste 7 Tage', 'pretix-eventlister'); ?></option>
+						<option value="30"><?php echo esc_html__('Nächste 30 Tage', 'pretix-eventlister'); ?></option>
 					</select>
 				</label>
 
@@ -76,7 +76,7 @@ ksort($organizer_options);
 				</label>
 			</div>
 			<div class="pretix-eventlister__filters-footer">
-				<button type="button" class="pretix-eventlister__filter-reset" data-filter-reset><?php echo esc_html__('Filter zuruecksetzen', 'pretix-eventlister'); ?></button>
+				<button type="button" class="pretix-eventlister__filter-reset" data-filter-reset><?php echo esc_html__('Filter zurücksetzen', 'pretix-eventlister'); ?></button>
 				<span class="pretix-eventlister__filter-count" data-filter-count></span>
 			</div>
 		</div>
@@ -175,11 +175,31 @@ ksort($organizer_options);
 										<?php
 										printf(
 											/* translators: %d: number of tickets currently available */
-											esc_html__('Verfuegbar: %d Tickets', 'pretix-eventlister'),
+											esc_html__('Verfügbar: %d Tickets', 'pretix-eventlister'),
 											(int) $event['available_tickets']
 										);
 										?>
 									</p>
+								<?php endif; ?>
+
+								<?php if (! empty($event['product_availability']) && is_array($event['product_availability'])) : ?>
+									<ul class="pretix-eventlister__availability-list">
+										<?php foreach ($event['product_availability'] as $product_row) : ?>
+											<?php if (! is_array($product_row) || empty($product_row['name'])) : ?>
+												<?php continue; ?>
+											<?php endif; ?>
+											<li>
+												<strong><?php echo esc_html((string) $product_row['name']); ?>:</strong>
+												<?php
+												if (isset($product_row['available_tickets']) && null !== $product_row['available_tickets']) {
+													echo esc_html(number_format_i18n((int) $product_row['available_tickets']) . ' ' . __('restlich', 'pretix-eventlister'));
+												} else {
+													echo esc_html__('n/a', 'pretix-eventlister');
+												}
+												?>
+											</li>
+										<?php endforeach; ?>
+									</ul>
 								<?php endif; ?>
 							<?php endif; ?>
 						</div>

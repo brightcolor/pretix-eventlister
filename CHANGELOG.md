@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
+## [1.6.0] - 2026-04-18
+
+- Added manual per-event override controls in the synced Event CPT (title, description, image, location, ticket URL) with a dedicated “override active” lock.
+- Synced events now preserve manual override content and no longer overwrite locked fields during API synchronization.
+- Fixed `Array to string conversion` warnings for structured `location` payloads by adding robust location value resolution.
+- Reworked ticket availability logic to use remaining ticket quantities instead of sold counts.
+- Added per-product remaining ticket output in frontend cards and backend event preview.
+
 ## [1.5.0] - 2026-04-18
 
 - Added per-event available ticket output based on pretix quota availability.

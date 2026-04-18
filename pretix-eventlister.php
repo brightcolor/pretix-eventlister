@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Displays pretix events in a modern, responsive WordPress layout.
- * Version: 1.5.0
+ * Version: 1.6.0
  * Author: bright color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.5.0';
+	const VERSION = '1.6.0';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -27,6 +27,7 @@ final class Pretix_Eventlister {
 	const CPT = 'pretix_eventlister_event';
 	const CRON_HOOK = 'pretix_eventlister_sync_events';
 	private $inline_translations = array();
+	private $manual_override_cache = array();
 
 	public function __construct() {
 		add_action('plugins_loaded', array($this, 'load_textdomain'));
@@ -38,6 +39,8 @@ final class Pretix_Eventlister {
 		add_action('admin_post_pretix_eventlister_flush_cache', array($this, 'handle_admin_flush_cache'));
 		add_action('admin_post_pretix_eventlister_test_api', array($this, 'handle_admin_test_api'));
 		add_action(self::CRON_HOOK, array($this, 'sync_events_to_cpt'));
+		add_action('add_meta_boxes', array($this, 'register_event_override_metabox'));
+		add_action('save_post_' . self::CPT, array($this, 'save_event_override_metabox'), 10, 2);
 		add_action('admin_menu', array($this, 'register_settings_page'));
 		add_action('admin_init', array($this, 'register_settings'));
 		add_action('admin_enqueue_scripts', array($this, 'enqueue_plugin_admin_assets'));
@@ -386,23 +389,23 @@ final class Pretix_Eventlister {
 			),
 			array(
 				'key' => 'feature_badges',
-				'label' => __('Badges (kostenlos, online, mehrtaegig, demnaechst)', 'pretix-eventlister'),
+				'label' => __('Badges (kostenlos, online, mehrtägig, demnächst)', 'pretix-eventlister'),
 				'section' => 'pretix_eventlister_display',
 				'type' => 'checkbox',
 			),
 			array(
 				'key' => 'feature_badges_availability',
-				'label' => __('Badges fuer Verfuegbarkeit (ausverkauft / wenige Tickets)', 'pretix-eventlister'),
+				'label' => __('Badges für Verfügbarkeit (ausverkauft / wenige Tickets)', 'pretix-eventlister'),
 				'section' => 'pretix_eventlister_display',
 				'type' => 'checkbox',
 				'description' => __('Erfordert zusaetzliche API-Abfragen (Quotas).', 'pretix-eventlister'),
 			),
 			array(
 				'key' => 'show_available_tickets',
-				'label' => __('Verfuegbare Tickets je Event anzeigen', 'pretix-eventlister'),
+				'label' => __('Verfügbare Tickets je Event anzeigen', 'pretix-eventlister'),
 				'section' => 'pretix_eventlister_display',
 				'type' => 'checkbox',
-				'description' => __('Zeigt pro Event die aktuell verfuegbare Ticketanzahl aus den Quotas an.', 'pretix-eventlister'),
+				'description' => __('Zeigt pro Event die aktuell verfügbare Ticketanzahl aus den Quotas an.', 'pretix-eventlister'),
 			),
 			array(
 				'key' => 'low_ticket_threshold',
@@ -411,7 +414,7 @@ final class Pretix_Eventlister {
 				'type' => 'number',
 				'min' => 1,
 				'step' => 1,
-				'description' => __('Ab dieser verfuegbaren Ticketanzahl (oder weniger) wird der Hinweis "Wenige Tickets" gesetzt.', 'pretix-eventlister'),
+				'description' => __('Ab dieser verfügbaren Ticketanzahl (oder weniger) wird der Hinweis "Wenige Tickets" gesetzt.', 'pretix-eventlister'),
 			),
 			array(
 				'key' => 'feature_calendar',
@@ -646,7 +649,7 @@ final class Pretix_Eventlister {
 			esc_html__('Cache leeren', 'pretix-eventlister')
 		);
 		echo '</p>';
-		echo '<p class="description">' . esc_html__('Hinweis: Diese Aktionen beeinflussen nur dieses Plugin. Der Cache wird bei Optionsaenderungen automatisch geleert.', 'pretix-eventlister') . '</p>';
+		echo '<p class="description">' . esc_html__('Hinweis: Diese Aktionen beeinflussen nur dieses Plugin. Der Cache wird bei Optionsänderungen automatisch geleert.', 'pretix-eventlister') . '</p>';
 		echo $this->render_admin_events_snapshot();
 	}
 
@@ -704,7 +707,7 @@ final class Pretix_Eventlister {
 						<th><?php echo esc_html__('Event', 'pretix-eventlister'); ?></th>
 						<th><?php echo esc_html__('Start', 'pretix-eventlister'); ?></th>
 						<th><?php echo esc_html__('Ort', 'pretix-eventlister'); ?></th>
-						<th><?php echo esc_html__('Verfuegbar', 'pretix-eventlister'); ?></th>
+						<th><?php echo esc_html__('Verfügbar', 'pretix-eventlister'); ?></th>
 						<th><?php echo esc_html__('Preis', 'pretix-eventlister'); ?></th>
 						<th><?php echo esc_html__('Status', 'pretix-eventlister'); ?></th>
 						<th><?php echo esc_html__('API-Info', 'pretix-eventlister'); ?></th>
@@ -721,6 +724,21 @@ final class Pretix_Eventlister {
 						if (! empty($event['sold_out'])) {
 							$availability_label = __('Ausverkauft', 'pretix-eventlister');
 						}
+						$product_lines = array();
+						if (! empty($event['product_availability']) && is_array($event['product_availability'])) {
+							foreach ($event['product_availability'] as $product_row) {
+								if (! is_array($product_row) || empty($product_row['name'])) {
+									continue;
+								}
+								$product_lines[] = sprintf(
+									'%s: %s',
+									sanitize_text_field((string) $product_row['name']),
+									isset($product_row['available_tickets']) && null !== $product_row['available_tickets']
+										? number_format_i18n((int) $product_row['available_tickets'])
+										: 'n/a'
+								);
+							}
+						}
 
 						$price_label = __('n/a', 'pretix-eventlister');
 						if (isset($event['lowest_price']) && null !== $event['lowest_price']) {
@@ -732,7 +750,7 @@ final class Pretix_Eventlister {
 						$status_parts = array();
 						$status_parts[] = ! empty($event['is_live']) ? __('live', 'pretix-eventlister') : __('nicht live', 'pretix-eventlister');
 						if (isset($event['is_public'])) {
-							$status_parts[] = ! empty($event['is_public']) ? __('oeffentlich', 'pretix-eventlister') : __('intern', 'pretix-eventlister');
+							$status_parts[] = ! empty($event['is_public']) ? __('öffentlich', 'pretix-eventlister') : __('intern', 'pretix-eventlister');
 						}
 						$status_parts[] = ! empty($event['is_online']) ? __('online', 'pretix-eventlister') : __('vor Ort', 'pretix-eventlister');
 						?>
@@ -740,12 +758,17 @@ final class Pretix_Eventlister {
 							<td><?php echo esc_html((string) $event['organizer_name']); ?><br><code><?php echo esc_html((string) $event['organizer_slug']); ?></code></td>
 							<td><?php echo esc_html((string) $event['name']); ?><br><code><?php echo esc_html((string) $event['slug']); ?></code></td>
 							<td><?php echo esc_html((string) $event['date_label']); ?><?php if (! empty($event['time_label'])) : ?><br><?php echo esc_html((string) $event['time_label']); ?><?php endif; ?></td>
-							<td><?php echo esc_html(! empty($event['location']) ? (string) $event['location'] : '-'); ?></td>
-							<td><?php echo esc_html($availability_label); ?></td>
+							<td><?php echo esc_html(! empty($event['location']) ? $this->resolve_location_text($event['location']) : '-'); ?></td>
+							<td>
+								<?php echo esc_html($availability_label); ?>
+								<?php if (! empty($product_lines)) : ?>
+									<br><small><?php echo esc_html(implode(' | ', $product_lines)); ?></small>
+								<?php endif; ?>
+							</td>
 							<td><?php echo esc_html($price_label); ?></td>
 							<td><?php echo esc_html(implode(' | ', $status_parts)); ?></td>
 							<td><code><?php echo esc_html('id:' . (int) $event['event_id']); ?></code><?php if (! empty($event['timezone'])) : ?><br><code><?php echo esc_html('tz:' . (string) $event['timezone']); ?></code><?php endif; ?></td>
-							<td><?php if (! empty($event['url'])) : ?><a href="<?php echo esc_url((string) $event['url']); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html__('oeffnen', 'pretix-eventlister'); ?></a><?php else : ?>-<?php endif; ?></td>
+							<td><?php if (! empty($event['url'])) : ?><a href="<?php echo esc_url((string) $event['url']); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html__('öffnen', 'pretix-eventlister'); ?></a><?php else : ?>-<?php endif; ?></td>
 						</tr>
 					<?php endforeach; ?>
 				</tbody>
@@ -821,12 +844,106 @@ final class Pretix_Eventlister {
 				'show_ui' => (bool) $enabled,
 				'show_in_menu' => (bool) $enabled,
 				'show_in_rest' => (bool) $enabled,
-				'supports' => array('title', 'editor', 'excerpt'),
+				'supports' => array('title', 'editor', 'excerpt', 'thumbnail'),
 				'has_archive' => false,
 				'rewrite' => false,
 				'delete_with_user' => false,
 			)
 		);
+	}
+
+	public function register_event_override_metabox() {
+		add_meta_box(
+			'pretix-eventlister-overrides',
+			__('Manuelle Event-Overrides', 'pretix-eventlister'),
+			array($this, 'render_event_override_metabox'),
+			self::CPT,
+			'normal',
+			'high'
+		);
+	}
+
+	public function render_event_override_metabox($post) {
+		if (! $post instanceof WP_Post || self::CPT !== $post->post_type) {
+			return;
+		}
+
+		wp_nonce_field('pretix_eventlister_override_meta', 'pretix_eventlister_override_nonce');
+
+		$enabled = ! empty(get_post_meta($post->ID, '_pretix_manual_override_enabled', true));
+		$name = (string) get_post_meta($post->ID, '_pretix_manual_name', true);
+		$description = (string) get_post_meta($post->ID, '_pretix_manual_description', true);
+		$image = (string) get_post_meta($post->ID, '_pretix_manual_image', true);
+		$location = (string) get_post_meta($post->ID, '_pretix_manual_location', true);
+		$url = (string) get_post_meta($post->ID, '_pretix_manual_url', true);
+		?>
+		<p>
+			<label>
+				<input type="checkbox" name="pretix_manual_override_enabled" value="1" <?php checked($enabled); ?> />
+				<?php echo esc_html__('Manuelle Overrides aktivieren (API-Sync überschreibt diese Werte nicht)', 'pretix-eventlister'); ?>
+			</label>
+		</p>
+		<p class="description"><?php echo esc_html__('Leer lassen = Wert aus pretix verwenden.', 'pretix-eventlister'); ?></p>
+		<p>
+			<label for="pretix_manual_name"><strong><?php echo esc_html__('Titel', 'pretix-eventlister'); ?></strong></label><br />
+			<input type="text" id="pretix_manual_name" name="pretix_manual_name" class="widefat" value="<?php echo esc_attr($name); ?>" />
+		</p>
+		<p>
+			<label for="pretix_manual_description"><strong><?php echo esc_html__('Beschreibung (HTML oder Markdown)', 'pretix-eventlister'); ?></strong></label><br />
+			<textarea id="pretix_manual_description" name="pretix_manual_description" rows="6" class="widefat"><?php echo esc_textarea($description); ?></textarea>
+		</p>
+		<p>
+			<label for="pretix_manual_image"><strong><?php echo esc_html__('Bild-URL', 'pretix-eventlister'); ?></strong></label><br />
+			<input type="url" id="pretix_manual_image" name="pretix_manual_image" class="widefat" value="<?php echo esc_attr($image); ?>" placeholder="https://example.com/image.jpg" />
+		</p>
+		<p>
+			<label for="pretix_manual_location"><strong><?php echo esc_html__('Ort', 'pretix-eventlister'); ?></strong></label><br />
+			<input type="text" id="pretix_manual_location" name="pretix_manual_location" class="widefat" value="<?php echo esc_attr($location); ?>" />
+		</p>
+		<p>
+			<label for="pretix_manual_url"><strong><?php echo esc_html__('Ticket-URL', 'pretix-eventlister'); ?></strong></label><br />
+			<input type="url" id="pretix_manual_url" name="pretix_manual_url" class="widefat" value="<?php echo esc_attr($url); ?>" placeholder="https://tickets.example.com/event" />
+		</p>
+		<?php
+	}
+
+	public function save_event_override_metabox($post_id, $post) {
+		if (! $post instanceof WP_Post || self::CPT !== $post->post_type) {
+			return;
+		}
+
+		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+			return;
+		}
+
+		if (! isset($_POST['pretix_eventlister_override_nonce']) || ! wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['pretix_eventlister_override_nonce'])), 'pretix_eventlister_override_meta')) {
+			return;
+		}
+
+		if (! current_user_can('edit_post', $post_id)) {
+			return;
+		}
+
+		$enabled = isset($_POST['pretix_manual_override_enabled']) ? 1 : 0;
+		update_post_meta($post_id, '_pretix_manual_override_enabled', $enabled);
+
+		$fields = array(
+			'_pretix_manual_name' => isset($_POST['pretix_manual_name']) ? sanitize_text_field(wp_unslash($_POST['pretix_manual_name'])) : '',
+			'_pretix_manual_description' => isset($_POST['pretix_manual_description']) ? wp_kses_post(wp_unslash($_POST['pretix_manual_description'])) : '',
+			'_pretix_manual_image' => isset($_POST['pretix_manual_image']) ? esc_url_raw(wp_unslash($_POST['pretix_manual_image'])) : '',
+			'_pretix_manual_location' => isset($_POST['pretix_manual_location']) ? sanitize_text_field(wp_unslash($_POST['pretix_manual_location'])) : '',
+			'_pretix_manual_url' => isset($_POST['pretix_manual_url']) ? esc_url_raw(wp_unslash($_POST['pretix_manual_url'])) : '',
+		);
+
+		foreach ($fields as $meta_key => $meta_value) {
+			if ('' === $meta_value) {
+				delete_post_meta($post_id, $meta_key);
+				continue;
+			}
+			update_post_meta($post_id, $meta_key, $meta_value);
+		}
+
+		$this->manual_override_cache = array();
 	}
 
 	public function register_cron() {
@@ -920,28 +1037,33 @@ final class Pretix_Eventlister {
 
 			$key = strtolower($event['organizer_slug'] . '/' . $event['slug']);
 			$post_id = isset($index[ $key ]) ? $index[ $key ] : 0;
+			$manual_override_active = $post_id ? ! empty(get_post_meta($post_id, '_pretix_manual_override_enabled', true)) : false;
 
 			$content = '';
 			if (! empty($event['description'])) {
 				$content = wp_kses_post($event['description']);
 			}
 
-			$postarr = array(
-				'ID' => $post_id,
-				'post_type' => self::CPT,
-				'post_status' => 'publish',
-				'post_title' => wp_strip_all_tags((string) $event['name']),
-				'post_content' => $content,
-				'post_excerpt' => wp_strip_all_tags(wp_trim_words($content, 35)),
-			);
+			$new_id = $post_id;
+			if (! $post_id || ! $manual_override_active) {
+				$postarr = array(
+					'ID' => $post_id,
+					'post_type' => self::CPT,
+					'post_status' => 'publish',
+					'post_title' => wp_strip_all_tags((string) $event['name']),
+					'post_content' => $content,
+					'post_excerpt' => wp_strip_all_tags(wp_trim_words($content, 35)),
+				);
 
-			$new_id = wp_insert_post($postarr, true);
-			if (is_wp_error($new_id) || ! $new_id) {
-				continue;
+				$new_id = wp_insert_post($postarr, true);
+				if (is_wp_error($new_id) || ! $new_id) {
+					continue;
+				}
 			}
 
 			update_post_meta($new_id, '_pretix_org', (string) $event['organizer_slug']);
 			update_post_meta($new_id, '_pretix_slug', (string) $event['slug']);
+			update_post_meta($new_id, '_pretix_source_url', (string) $event['url']);
 			update_post_meta($new_id, '_pretix_url', (string) $event['url']);
 			update_post_meta($new_id, '_pretix_date_from', ! empty($event['date_from']) ? (int) $event['date_from'] : 0);
 			update_post_meta($new_id, '_pretix_date_to', ! empty($event['date_to']) ? (int) $event['date_to'] : 0);
@@ -996,7 +1118,7 @@ final class Pretix_Eventlister {
 		$name = $this->resolve_event_name($event);
 		$description_html = $this->resolve_event_description($event, $settings);
 		$description = trim(preg_replace('/\\s+/', ' ', wp_strip_all_tags((string) $description_html)));
-		$location = ! empty($event['location']) ? wp_strip_all_tags((string) $event['location']) : '';
+		$location = ! empty($event['location']) ? $this->resolve_location_text($event['location']) : '';
 		$start = ! empty($event['date_from']) ? strtotime((string) $event['date_from']) : 0;
 		$end = ! empty($event['date_to']) ? strtotime((string) $event['date_to']) : 0;
 		$url = $this->resolve_public_url($event, $base_url, $organizer_slug);
@@ -1197,7 +1319,7 @@ final class Pretix_Eventlister {
 		if (empty($collection['events'])) {
 			return sprintf(
 				'<div class="pretix-eventlister__notice">%s</div>',
-				esc_html__('Aktuell sind keine passenden Events verfuegbar.', 'pretix-eventlister')
+				esc_html__('Aktuell sind keine passenden Events verfügbar.', 'pretix-eventlister')
 			);
 		}
 
@@ -1792,7 +1914,7 @@ final class Pretix_Eventlister {
 			}
 
 			if (is_int($days_until) && $days_until >= 0 && $days_until <= 7) {
-				$badges[] = array('key' => 'soon', 'label' => 0 === $days_until ? __('Heute', 'pretix-eventlister') : (1 === $days_until ? __('Morgen', 'pretix-eventlister') : __('Demnaechst', 'pretix-eventlister')));
+				$badges[] = array('key' => 'soon', 'label' => 0 === $days_until ? __('Heute', 'pretix-eventlister') : (1 === $days_until ? __('Morgen', 'pretix-eventlister') : __('Demnächst', 'pretix-eventlister')));
 			}
 
 			if ($is_pinned) {
@@ -1805,6 +1927,7 @@ final class Pretix_Eventlister {
 			'available_tickets' => null,
 			'is_sold_out' => false,
 			'badge' => null,
+			'products' => array(),
 		);
 
 		if ($needs_availability) {
@@ -1822,12 +1945,12 @@ final class Pretix_Eventlister {
 			$badges[] = $availability_summary['badge'];
 		}
 
-		return array(
+		$normalized = array(
 			'name' => $this->resolve_event_name($event),
 			'slug' => $event_slug,
 			'organizer_slug' => $organizer_slug,
 			'organizer_name' => $organizer_name,
-			'location' => (! empty($query['show_location']) && ! empty($event['location'])) ? wp_strip_all_tags($event['location']) : '',
+			'location' => (! empty($query['show_location']) && ! empty($event['location'])) ? $this->resolve_location_text($event['location']) : '',
 			'url' => $this->resolve_public_url($event, $base_url, $organizer_slug),
 			'description' => $needs_description ? $this->resolve_event_description($event, $settings) : '',
 			'image' => $needs_image ? $this->extract_image_url($event, $settings, $base_url) : '',
@@ -1839,6 +1962,7 @@ final class Pretix_Eventlister {
 			'is_free' => ! empty($ticket_stats['is_free']),
 			'available_tickets' => isset($availability_summary['available_tickets']) ? $availability_summary['available_tickets'] : null,
 			'sold_out' => ! empty($availability_summary['is_sold_out']),
+			'product_availability' => ! empty($availability_summary['products']) && is_array($availability_summary['products']) ? $availability_summary['products'] : array(),
 			'date_from' => $date_from,
 			'date_to' => $date_to,
 			'sort_timestamp' => $date_from ? $date_from : ($date_to ? $date_to : PHP_INT_MAX),
@@ -1859,6 +1983,33 @@ final class Pretix_Eventlister {
 			'is_live' => isset($event['live']) ? (bool) $event['live'] : true,
 			'timezone' => ! empty($event['timezone']) ? sanitize_text_field((string) $event['timezone']) : '',
 		);
+
+		$manual_override = $this->get_event_manual_overrides($organizer_slug, $event_slug);
+		if (! empty($manual_override)) {
+			if (! empty($manual_override['name'])) {
+				$normalized['name'] = $manual_override['name'];
+			}
+
+			if (array_key_exists('description', $manual_override) && '' !== $manual_override['description']) {
+				$normalized['description'] = $this->render_event_description_html($manual_override['description']);
+			}
+
+			if (! empty($manual_override['image'])) {
+				$normalized['image'] = $manual_override['image'];
+			}
+
+			if (! empty($manual_override['location'])) {
+				$normalized['location'] = $manual_override['location'];
+			}
+
+			if (! empty($manual_override['url'])) {
+				$normalized['url'] = $manual_override['url'];
+			}
+
+			$normalized['is_manual_override'] = true;
+		}
+
+		return $normalized;
 	}
 
 	private function get_event_settings($base_url, $api_token, $organizer_slug, $event_slug, $cache_ttl) {
@@ -1945,99 +2096,227 @@ final class Pretix_Eventlister {
 	}
 
 	private function get_event_availability_summary($base_url, $api_token, $organizer_slug, $event_slug, $cache_ttl, $low_ticket_threshold = 10) {
+		$items = $this->get_event_items($base_url, $api_token, $organizer_slug, $event_slug, $cache_ttl);
 		$quotas = $this->get_event_quotas($base_url, $api_token, $organizer_slug, $event_slug, $cache_ttl);
-		if (is_wp_error($quotas) || empty($quotas) || ! is_array($quotas)) {
+		if (is_wp_error($items) || is_wp_error($quotas) || empty($quotas) || ! is_array($quotas)) {
 			return array(
 				'available_tickets' => null,
 				'is_sold_out' => false,
 				'badge' => null,
+				'products' => array(),
 			);
 		}
 
-		$numbers = array();
-		$is_sold_out = null;
+		$item_names = array();
+		$item_availability = array();
+		if (is_array($items)) {
+			foreach ($items as $item) {
+				if (! is_array($item)) {
+					continue;
+				}
+
+				if (! $this->is_sellable_item($item)) {
+					continue;
+				}
+
+				$item_id = isset($item['id']) ? absint($item['id']) : 0;
+				if ($item_id <= 0) {
+					continue;
+				}
+
+				$item_names[ $item_id ] = $this->resolve_item_name($item);
+				$item_availability[ $item_id ] = null;
+			}
+		}
 
 		foreach ($quotas as $quota) {
 			if (! is_array($quota)) {
 				continue;
 			}
 
-			$availability = isset($quota['availability']) ? $quota['availability'] : null;
-			if (is_string($availability)) {
-				$availability = strtolower($availability);
-				if (in_array($availability, array('sold_out', 'soldout', 'unavailable', 'none'), true)) {
-					$is_sold_out = true;
-				}
-				continue;
-			}
-
-			if (is_array($availability)) {
-				foreach (array('available', 'available_number', 'available_count', 'available_total') as $key) {
-					if (isset($availability[ $key ]) && is_numeric($availability[ $key ])) {
-						$numbers[] = (int) $availability[ $key ];
-						break;
+			$quota_item_ids = array();
+			if (! empty($quota['items']) && is_array($quota['items'])) {
+				foreach ($quota['items'] as $item_id) {
+					$item_id = absint($item_id);
+					if ($item_id > 0) {
+						$quota_item_ids[] = $item_id;
 					}
 				}
 			}
 
-			foreach (array('available', 'available_number', 'available_count') as $key) {
-				if (isset($quota[ $key ]) && is_numeric($quota[ $key ])) {
-					$numbers[] = (int) $quota[ $key ];
-					break;
+			if (empty($quota_item_ids)) {
+				continue;
+			}
+
+			$quota_available = $this->extract_quota_available_tickets($quota);
+			$quota_is_sold_out = $this->is_quota_sold_out($quota, $quota_available);
+
+			foreach ($quota_item_ids as $item_id) {
+				if (! array_key_exists($item_id, $item_availability)) {
+					continue;
+				}
+
+				if ($quota_is_sold_out) {
+					$item_availability[ $item_id ] = 0;
+					continue;
+				}
+
+				if (null === $quota_available) {
+					continue;
+				}
+
+				$current = $item_availability[ $item_id ];
+				if (null === $current) {
+					$item_availability[ $item_id ] = $quota_available;
+				} else {
+					$item_availability[ $item_id ] = min($current, $quota_available);
 				}
 			}
 		}
 
-		if (null === $is_sold_out && empty($numbers)) {
+		if (empty($item_availability)) {
 			return array(
 				'available_tickets' => null,
 				'is_sold_out' => false,
 				'badge' => null,
+				'products' => array(),
 			);
 		}
 
-		if (true === $is_sold_out) {
-			return array(
-				'available_tickets' => 0,
-				'is_sold_out' => true,
-				'badge' => array('key' => 'soldout', 'label' => __('Ausverkauft', 'pretix-eventlister')),
-			);
-		}
+		$product_availability = array();
+		$total_available = 0;
+		$has_known_values = false;
 
-		$min = null;
-		foreach ($numbers as $value) {
-			if ($value < 0) {
+		foreach ($item_availability as $item_id => $available_tickets) {
+			if (null !== $available_tickets && $available_tickets < 0) {
 				continue;
 			}
-			$min = null === $min ? $value : min($min, $value);
+
+			if (null !== $available_tickets) {
+				$has_known_values = true;
+				$total_available += (int) $available_tickets;
+			}
+
+			$product_availability[] = array(
+				'item_id' => (int) $item_id,
+				'name' => isset($item_names[ $item_id ]) ? $item_names[ $item_id ] : sprintf(__('Produkt %d', 'pretix-eventlister'), (int) $item_id),
+				'available_tickets' => null !== $available_tickets ? (int) $available_tickets : null,
+				'sold_out' => null !== $available_tickets ? (0 === (int) $available_tickets) : false,
+			);
 		}
 
-		if (null === $min) {
+		if (! $has_known_values) {
 			return array(
 				'available_tickets' => null,
 				'is_sold_out' => false,
 				'badge' => null,
+				'products' => $product_availability,
 			);
 		}
 
-		if (0 === $min) {
+		if (0 === $total_available) {
 			return array(
 				'available_tickets' => 0,
 				'is_sold_out' => true,
 				'badge' => array('key' => 'soldout', 'label' => __('Ausverkauft', 'pretix-eventlister')),
+				'products' => $product_availability,
 			);
 		}
 
 		$badge = null;
-		if ($min <= max(1, absint($low_ticket_threshold))) {
+		if ($total_available <= max(1, absint($low_ticket_threshold))) {
 			$badge = array('key' => 'low', 'label' => __('Wenige Tickets', 'pretix-eventlister'));
 		}
 
 		return array(
-			'available_tickets' => $min,
+			'available_tickets' => $total_available,
 			'is_sold_out' => false,
 			'badge' => $badge,
+			'products' => $product_availability,
 		);
+	}
+
+	private function is_sellable_item($item) {
+		if (! is_array($item)) {
+			return false;
+		}
+
+		if (isset($item['active']) && ! $item['active']) {
+			return false;
+		}
+
+		if (isset($item['admission']) && ! $item['admission']) {
+			return false;
+		}
+
+		return true;
+	}
+
+	private function resolve_item_name($item) {
+		if (! is_array($item)) {
+			return '';
+		}
+
+		if (! empty($item['name']) && is_array($item['name'])) {
+			return $this->resolve_text_value($item['name']);
+		}
+
+		if (! empty($item['name']) && is_string($item['name'])) {
+			return sanitize_text_field($item['name']);
+		}
+
+		return ! empty($item['id']) ? sprintf(__('Produkt %d', 'pretix-eventlister'), absint($item['id'])) : __('Produkt', 'pretix-eventlister');
+	}
+
+	private function extract_quota_available_tickets($quota) {
+		if (! is_array($quota)) {
+			return null;
+		}
+
+		$availability = isset($quota['availability']) ? $quota['availability'] : null;
+		if (is_array($availability)) {
+			foreach (array('available_number', 'available', 'available_count', 'available_total') as $key) {
+				if (isset($availability[ $key ]) && is_numeric($availability[ $key ])) {
+					return max(0, (int) $availability[ $key ]);
+				}
+			}
+		}
+
+		foreach (array('available_number', 'available', 'available_count') as $key) {
+			if (isset($quota[ $key ]) && is_numeric($quota[ $key ])) {
+				return max(0, (int) $quota[ $key ]);
+			}
+		}
+
+		return null;
+	}
+
+	private function is_quota_sold_out($quota, $quota_available = null) {
+		if (! is_array($quota)) {
+			return false;
+		}
+
+		if (null !== $quota_available && 0 === (int) $quota_available) {
+			return true;
+		}
+
+		$availability = isset($quota['availability']) ? $quota['availability'] : null;
+		if (is_string($availability)) {
+			return in_array(strtolower($availability), array('sold_out', 'soldout', 'unavailable', 'none'), true);
+		}
+
+		if (is_array($availability)) {
+			foreach (array('is_sold_out', 'sold_out') as $key) {
+				if (array_key_exists($key, $availability)) {
+					return (bool) $availability[ $key ];
+				}
+			}
+			if (array_key_exists('available', $availability) && is_bool($availability['available'])) {
+				return ! $availability['available'];
+			}
+		}
+
+		return false;
 	}
 
 	private function get_api_object($url, $api_token) {
@@ -2251,7 +2530,7 @@ final class Pretix_Eventlister {
 	}
 
 	private function is_likely_online_event($event) {
-		$location = ! empty($event['location']) ? strtolower((string) $event['location']) : '';
+		$location = ! empty($event['location']) ? strtolower($this->resolve_location_text($event['location'])) : '';
 		if ($location && preg_match('/\\b(online|livestream|stream|webinar|zoom|teams|virtuell|virtual)\\b/i', $location)) {
 			return true;
 		}
@@ -2322,6 +2601,107 @@ final class Pretix_Eventlister {
 					return $this->normalize_media_url($property['value'], $base_url);
 				}
 			}
+		}
+
+		return '';
+	}
+
+	private function get_event_manual_overrides($organizer_slug, $event_slug) {
+		$key = strtolower(sanitize_title($organizer_slug) . '/' . sanitize_title($event_slug));
+		if (isset($this->manual_override_cache[ $key ])) {
+			return $this->manual_override_cache[ $key ];
+		}
+
+		if (! $organizer_slug || ! $event_slug || ! post_type_exists(self::CPT)) {
+			$this->manual_override_cache[ $key ] = array();
+			return array();
+		}
+
+		$post_ids = get_posts(
+			array(
+				'post_type' => self::CPT,
+				'post_status' => array('publish', 'draft', 'pending', 'private'),
+				'posts_per_page' => 1,
+				'fields' => 'ids',
+				'meta_query' => array(
+					'relation' => 'AND',
+					array(
+						'key' => '_pretix_org',
+						'value' => (string) $organizer_slug,
+					),
+					array(
+						'key' => '_pretix_slug',
+						'value' => (string) $event_slug,
+					),
+					array(
+						'key' => '_pretix_manual_override_enabled',
+						'value' => '1',
+					),
+				),
+			)
+		);
+
+		if (empty($post_ids)) {
+			$this->manual_override_cache[ $key ] = array();
+			return array();
+		}
+
+		$post_id = (int) $post_ids[0];
+		$post = get_post($post_id);
+		if (! $post instanceof WP_Post) {
+			$this->manual_override_cache[ $key ] = array();
+			return array();
+		}
+
+		$manual_image = (string) get_post_meta($post_id, '_pretix_manual_image', true);
+		if ('' === $manual_image && has_post_thumbnail($post_id)) {
+			$thumbnail = wp_get_attachment_image_url(get_post_thumbnail_id($post_id), 'full');
+			if (is_string($thumbnail) && '' !== $thumbnail) {
+				$manual_image = $thumbnail;
+			}
+		}
+
+		$overrides = array(
+			'name' => (string) get_post_meta($post_id, '_pretix_manual_name', true),
+			'description' => (string) get_post_meta($post_id, '_pretix_manual_description', true),
+			'image' => $manual_image,
+			'location' => (string) get_post_meta($post_id, '_pretix_manual_location', true),
+			'url' => (string) get_post_meta($post_id, '_pretix_manual_url', true),
+		);
+
+		if ('' === $overrides['name'] && ! empty($post->post_title)) {
+			$overrides['name'] = sanitize_text_field($post->post_title);
+		}
+
+		if ('' === $overrides['description'] && ! empty($post->post_content)) {
+			$overrides['description'] = (string) $post->post_content;
+		}
+
+		$this->manual_override_cache[ $key ] = $overrides;
+		return $overrides;
+	}
+
+	private function resolve_location_text($value) {
+		if (is_string($value)) {
+			return sanitize_text_field($value);
+		}
+
+		if (is_array($value)) {
+			foreach ($this->get_locale_preferences() as $locale) {
+				if (isset($value[ $locale ]) && is_scalar($value[ $locale ])) {
+					return sanitize_text_field((string) $value[ $locale ]);
+				}
+			}
+
+			foreach ($value as $entry) {
+				if (is_scalar($entry) && '' !== trim((string) $entry)) {
+					return sanitize_text_field((string) $entry);
+				}
+			}
+		}
+
+		if (is_scalar($value)) {
+			return sanitize_text_field((string) $value);
 		}
 
 		return '';

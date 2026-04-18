@@ -13,7 +13,7 @@ WordPress plugin for displaying pretix events in a modern, responsive event card
    - optional default organizers
    - API token
    - cache TTL
-   - optional HSP partner notice organizers
+   - optional partner notice organizers
 
 ## Usage
 
@@ -24,6 +24,8 @@ Default shortcode:
 ```
 
 Block editor alternative: insert the `Pretix Events` block (Widgets category).
+
+If CPT sync is enabled, each synced event can be manually overridden in WordPress without being overwritten by the next pretix sync.
 
 Examples:
 
@@ -52,9 +54,9 @@ Examples:
 - `badges`, `badges_availability`, `calendar`, `schema`, `modal`, `tilt`: `default|yes|no`
 - `show_available_tickets`: `default|yes|no`
 
-## HSP Partner Notice
+## Partner Platform Notice
 
-In plugin settings you can define organizer slugs that show a platform-only notice on event cards, clarifying that HSP-Events provides the platform/ticketing infrastructure only.
+In plugin settings you can define organizer slugs that show a platform-only notice on event cards, clarifying that your platform provides infrastructure only and is not the event organizer.
 
 ## GitHub Updates
 
@@ -69,6 +71,5 @@ See `CHANGELOG.md` for release history.
 ## Localization
 
 - Source descriptions and documentation use English naming.
-- The plugin UI can stay German via the bundled mapping file:
-  - `languages/pretix-eventlister-de_DE.php`
+- German UI texts are included directly in the plugin strings where relevant.
 - Low stock behavior is configurable in plugin settings (`low_ticket_threshold`).
