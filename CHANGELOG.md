@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
+## [1.7.0] - 2026-04-18
+
+- Added tabbed backend settings layout (Connection, Display, Sync & Overrides, Tools) for a cleaner admin UX.
+- Added visibility controls in settings:
+  - disabled organizers
+  - hidden events (`organizer-slug/event-slug`)
+- Expanded event override editor UI in the synced Event CPT with tabs and editable fields for:
+  - title, description, image
+  - start date, end date, location
+  - ticket shop URL
+  - hide event toggle
+- Manual overrides are kept on sync and now also support manual date/location/link control in frontend output.
+- Optimized sync fetch behavior by skipping extra event settings API calls when manual description/image overrides are already present.
+
 ## [1.6.2] - 2026-04-18
 
 - Fixed release ZIP packaging format: archive entries now use POSIX-style paths (`/`) so Linux/WordPress extraction creates real directories instead of backslash-named files.
