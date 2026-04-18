@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Displays pretix events in a modern, responsive WordPress layout.
- * Version: 1.6.0
+ * Version: 1.6.1
  * Author: bright color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.6.0';
+	const VERSION = '1.6.1';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -41,6 +41,7 @@ final class Pretix_Eventlister {
 		add_action(self::CRON_HOOK, array($this, 'sync_events_to_cpt'));
 		add_action('add_meta_boxes', array($this, 'register_event_override_metabox'));
 		add_action('save_post_' . self::CPT, array($this, 'save_event_override_metabox'), 10, 2);
+		add_action('admin_init', array($this, 'normalize_installation_state'));
 		add_action('admin_menu', array($this, 'register_settings_page'));
 		add_action('admin_init', array($this, 'register_settings'));
 		add_action('admin_enqueue_scripts', array($this, 'enqueue_plugin_admin_assets'));
@@ -104,16 +105,14 @@ final class Pretix_Eventlister {
 		$is_our_plugin_update = isset($options['hook_extra']['plugin']) && $this->get_plugin_basename() === $options['hook_extra']['plugin'];
 
 		$package = isset($options['package']) && is_string($options['package']) ? $options['package'] : '';
-		$is_our_package = $package && (
-			false !== stripos($package, 'pretix-eventlister') ||
-			false !== stripos($package, self::GITHUB_REPOSITORY)
-		);
+		$is_our_package = $this->is_our_package_reference($package);
+		$is_our_uploaded_zip = $this->is_uploaded_our_plugin_zip();
 
-		if (! $is_our_plugin_update && ! ($is_plugin_operation && $is_our_package)) {
+		if (! $is_our_plugin_update && ! ($is_plugin_operation && ($is_our_package || $is_our_uploaded_zip))) {
 			return $options;
 		}
 
-		// Ensures root-style ZIPs still install into /wp-content/plugins/pretix-eventlister/.
+		// Ensures root-style and nested ZIPs install into /wp-content/plugins/pretix-eventlister/.
 		$options['destination_name'] = self::PLUGIN_SLUG;
 		$options['abort_if_destination_exists'] = false;
 
@@ -1452,6 +1451,64 @@ final class Pretix_Eventlister {
 		}
 	}
 
+	public function normalize_installation_state() {
+		if (! is_admin()) {
+			return;
+		}
+
+		$canonical_basename = self::PLUGIN_SLUG . '/' . self::PLUGIN_SLUG . '.php';
+		$canonical_file = WP_PLUGIN_DIR . '/' . $canonical_basename;
+
+		if (! is_file($canonical_file)) {
+			return;
+		}
+
+		$active_plugins = get_option('active_plugins', array());
+		if (is_array($active_plugins) && ! empty($active_plugins)) {
+			$changed = false;
+
+			foreach ($active_plugins as $index => $plugin_basename) {
+				if (! is_string($plugin_basename) || ! $this->is_legacy_plugin_basename($plugin_basename)) {
+					continue;
+				}
+				$active_plugins[ $index ] = $canonical_basename;
+				$changed = true;
+			}
+
+			if ($changed) {
+				$active_plugins = array_values(array_unique($active_plugins));
+				update_option('active_plugins', $active_plugins, false);
+			}
+		}
+
+		$update_plugins = get_site_transient('update_plugins');
+		if (! is_object($update_plugins)) {
+			return;
+		}
+
+		$map_sets = array('checked', 'response', 'no_update');
+		$updated = false;
+		foreach ($map_sets as $set_key) {
+			if (empty($update_plugins->{$set_key}) || ! is_array($update_plugins->{$set_key})) {
+				continue;
+			}
+
+			foreach ($update_plugins->{$set_key} as $plugin_basename => $payload) {
+				if (! is_string($plugin_basename) || ! $this->is_legacy_plugin_basename($plugin_basename)) {
+					continue;
+				}
+
+				unset($update_plugins->{$set_key}[ $plugin_basename ]);
+				$update_plugins->{$set_key}[ $canonical_basename ] = $payload;
+				$updated = true;
+			}
+		}
+
+		if ($updated) {
+			set_site_transient('update_plugins', $update_plugins);
+		}
+	}
+
 	public function prefer_plugin_source_directory($source, $remote_source, $upgrader, $hook_extra) {
 		if (is_wp_error($source)) {
 			return $source;
@@ -1464,6 +1521,11 @@ final class Pretix_Eventlister {
 
 		if ($this->directory_contains_plugin_file($source)) {
 			return $source;
+		}
+
+		$direct_candidate = untrailingslashit($source . '/' . self::PLUGIN_SLUG);
+		if ($this->directory_contains_plugin_file($direct_candidate)) {
+			return $direct_candidate;
 		}
 
 		$candidates = glob($source . '/*', GLOB_ONLYDIR);
@@ -3344,6 +3406,47 @@ final class Pretix_Eventlister {
 
 	private function get_changelog_url() {
 		return trailingslashit(self::GITHUB_REPOSITORY_URL) . 'releases';
+	}
+
+	private function is_uploaded_our_plugin_zip() {
+		if (empty($_FILES['pluginzip']['name'])) {
+			return false;
+		}
+
+		$uploaded_name = sanitize_file_name(wp_unslash($_FILES['pluginzip']['name']));
+		return $this->is_our_package_reference($uploaded_name);
+	}
+
+	private function is_legacy_plugin_basename($plugin_basename) {
+		if (! is_string($plugin_basename)) {
+			return false;
+		}
+
+		$plugin_basename = trim($plugin_basename);
+		if ('' === $plugin_basename || self::PLUGIN_SLUG . '/' . self::PLUGIN_SLUG . '.php' === $plugin_basename) {
+			return false;
+		}
+
+		return (bool) preg_match(
+			'#^' . preg_quote(self::PLUGIN_SLUG, '#') . '(?:-[^/]+)/(?:' . preg_quote(self::PLUGIN_SLUG, '#') . '/)?' . preg_quote(self::PLUGIN_SLUG . '.php', '#') . '$#i',
+			$plugin_basename
+		);
+	}
+
+	private function is_our_package_reference($value) {
+		if (! is_string($value) || '' === trim($value)) {
+			return false;
+		}
+
+		$value = strtolower(trim($value));
+		if (false !== strpos($value, self::GITHUB_REPOSITORY)) {
+			return true;
+		}
+
+		return (bool) preg_match(
+			'#(?:^|/)' . preg_quote(self::PLUGIN_SLUG, '#') . '(?:[-_.]?\d+(?:\.\d+)*)?\.zip(?:$|\?)#i',
+			$value
+		);
 	}
 
 	private function directory_contains_plugin_file($directory) {

@@ -15,6 +15,9 @@ WordPress plugin for displaying pretix events in a modern, responsive event card
    - cache TTL
    - optional partner notice organizers
 
+Expected plugin path after installation/update:
+- `wp-content/plugins/pretix-eventlister/pretix-eventlister.php`
+
 ## Usage
 
 Default shortcode:

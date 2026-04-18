@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
+## [1.6.1] - 2026-04-18
+
+- Added robust installer/update path normalization for uploaded ZIP files to enforce the canonical plugin directory `pretix-eventlister`.
+- Added legacy installation self-healing for versioned/nested plugin basenames in WordPress active plugin and update transient data.
+- Improved source directory detection for nested ZIP extraction layouts to prevent `No such file or directory` and invalid plugin path issues.
+
 ## [1.6.0] - 2026-04-18
 
 - Added manual per-event override controls in the synced Event CPT (title, description, image, location, ticket URL) with a dedicated “override active” lock.
