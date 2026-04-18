@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
+## [1.8.0] - 2026-04-18
+
+- Added a backend shortcode generator with comprehensive option controls and one-click copy.
+- Security hardening:
+  - restricted legacy install-state normalization to users with plugin activation capability
+  - added basic public ICS endpoint rate limiting (per client/time window)
+  - added input length bounds for public ICS slug parameters
+  - locked paginated pretix follow-up requests to the same host to prevent token forwarding to foreign domains
+- Kept existing tabbed admin UX and manual event override behavior intact.
+
 ## [1.7.1] - 2026-04-18
 
 - Fixed tabbed settings save behavior: saving one tab no longer resets values from other tabs to defaults.

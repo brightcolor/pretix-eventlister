@@ -30,6 +30,7 @@ Block editor alternative: insert the `Pretix Events` block (Widgets category).
 
 If CPT sync is enabled, each synced event can be manually overridden in WordPress without being overwritten by the next pretix sync.
 The admin settings page is organized in tabs, and visibility can be controlled via disabled organizers and hidden event keys.
+The Display tab includes a shortcode generator to compose and copy full `[pretix_events ...]` configurations.
 
 Examples:
 

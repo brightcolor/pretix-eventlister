@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Displays pretix events in a modern, responsive WordPress layout.
- * Version: 1.7.1
+ * Version: 1.8.0
  * Author: bright color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.7.1';
+	const VERSION = '1.8.0';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -874,6 +874,7 @@ final class Pretix_Eventlister {
 					<li><code>[pretix_events scope="all" style="list" show_description="no"]</code></li>
 					<li><code>[pretix_events filters="yes" load_more="yes" page_size="12"]</code></li>
 				</ul>
+				<?php $this->render_shortcode_generator(); ?>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -904,6 +905,145 @@ final class Pretix_Eventlister {
 			do_settings_fields($page, $section_id);
 			echo '</table>';
 		}
+	}
+
+	private function render_shortcode_generator() {
+		$options = $this->get_options();
+		$defaults = array(
+			'scope' => ! empty($options['default_organizers']) ? 'selected' : 'all',
+			'limit' => '9',
+			'organizers' => '',
+			'style' => 'default',
+			'show_description' => 'default',
+			'show_organizer' => 'default',
+			'show_image' => 'default',
+			'show_time' => 'default',
+			'show_location' => 'default',
+			'show_countdown' => 'default',
+			'show_platform_notice' => 'default',
+			'show_organizer_slug' => 'default',
+			'show_ticket_button' => 'default',
+			'show_ticket_price' => 'default',
+			'filters' => 'default',
+			'load_more' => 'default',
+			'page_size' => (string) max(1, absint(isset($options['page_size']) ? $options['page_size'] : 9)),
+			'badges' => 'default',
+			'badges_availability' => 'default',
+			'show_available_tickets' => 'default',
+			'calendar' => 'default',
+			'schema' => 'default',
+			'modal' => 'default',
+			'tilt' => 'default',
+		);
+		?>
+		<div class="card" style="max-width:100%;padding:16px 18px;margin-top:16px;">
+			<h2 style="margin-top:0;"><?php echo esc_html__('Shortcode-Generator', 'pretix-eventlister'); ?></h2>
+			<p><?php echo esc_html__('Stelle alle Optionen ein und kopiere den fertigen Shortcode.', 'pretix-eventlister'); ?></p>
+
+			<div id="pretix-shortcode-generator" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 14px;">
+				<label><?php echo esc_html__('Scope', 'pretix-eventlister'); ?><br>
+					<select data-opt="scope">
+						<option value="selected" <?php selected('selected', $defaults['scope']); ?>>selected</option>
+						<option value="all" <?php selected('all', $defaults['scope']); ?>>all</option>
+					</select>
+				</label>
+				<label><?php echo esc_html__('Limit', 'pretix-eventlister'); ?><br>
+					<input type="text" value="<?php echo esc_attr($defaults['limit']); ?>" data-opt="limit" />
+				</label>
+				<label style="grid-column:1/-1;"><?php echo esc_html__('Organizers (comma separated slugs)', 'pretix-eventlister'); ?><br>
+					<input type="text" class="regular-text" style="width:100%;max-width:680px;" value="<?php echo esc_attr($defaults['organizers']); ?>" data-opt="organizers" />
+				</label>
+				<label><?php echo esc_html__('Style', 'pretix-eventlister'); ?><br>
+					<select data-opt="style">
+						<option value="default">default</option>
+						<option value="grid">grid</option>
+						<option value="list">list</option>
+						<option value="compact">compact</option>
+					</select>
+				</label>
+				<label><?php echo esc_html__('Page size', 'pretix-eventlister'); ?><br>
+					<input type="number" min="1" value="<?php echo esc_attr($defaults['page_size']); ?>" data-opt="page_size" />
+				</label>
+				<?php
+				$toggle_fields = array(
+					'show_description', 'show_organizer', 'show_image', 'show_time', 'show_location',
+					'show_countdown', 'show_platform_notice', 'show_organizer_slug', 'show_ticket_button',
+					'show_ticket_price', 'filters', 'load_more', 'badges', 'badges_availability',
+					'show_available_tickets', 'calendar', 'schema', 'modal', 'tilt',
+				);
+				foreach ($toggle_fields as $field) :
+					?>
+					<label><?php echo esc_html($field); ?><br>
+						<select data-opt="<?php echo esc_attr($field); ?>">
+							<option value="default">default</option>
+							<option value="yes">yes</option>
+							<option value="no">no</option>
+						</select>
+					</label>
+				<?php endforeach; ?>
+			</div>
+
+			<div style="margin-top:14px;">
+				<label style="display:inline-flex;align-items:center;gap:8px;">
+					<input type="checkbox" id="pretix-shortcode-all-opts" checked />
+					<?php echo esc_html__('Immer alle Optionen ausgeben', 'pretix-eventlister'); ?>
+				</label>
+			</div>
+
+			<div style="margin-top:10px;">
+				<textarea id="pretix-shortcode-output" readonly rows="4" style="width:100%;max-width:900px;font-family:ui-monospace,Consolas,monospace;"></textarea>
+			</div>
+			<p style="margin-top:8px;">
+				<button type="button" class="button button-primary" id="pretix-shortcode-copy"><?php echo esc_html__('Shortcode kopieren', 'pretix-eventlister'); ?></button>
+			</p>
+		</div>
+		<script>
+			(function(){
+				const root=document.getElementById('pretix-shortcode-generator');
+				const output=document.getElementById('pretix-shortcode-output');
+				const copyBtn=document.getElementById('pretix-shortcode-copy');
+				const includeAll=document.getElementById('pretix-shortcode-all-opts');
+				if(!root||!output||!copyBtn||!includeAll){return;}
+
+				const defaultMap=<?php echo wp_json_encode($defaults); ?>;
+				const fields=Array.from(root.querySelectorAll('[data-opt]'));
+
+				function escapeValue(v){
+					return String(v).replace(/"/g,'\\"');
+				}
+
+				function build(){
+					let attrs=[];
+					fields.forEach((field)=>{
+						const key=field.getAttribute('data-opt');
+						let value=(field.value||'').trim();
+						if(!key){return;}
+						if('organizers'===key && value===''){return;}
+						const isDefault = Object.prototype.hasOwnProperty.call(defaultMap,key) && String(defaultMap[key])===value;
+						if(!includeAll.checked && isDefault){return;}
+						if(''===value){return;}
+						attrs.push(key+'="'+escapeValue(value)+'"');
+					});
+					output.value='[pretix_events'+(attrs.length?' '+attrs.join(' '):'')+']';
+				}
+
+				fields.forEach((f)=>f.addEventListener('input',build));
+				fields.forEach((f)=>f.addEventListener('change',build));
+				includeAll.addEventListener('change',build);
+				copyBtn.addEventListener('click',async()=>{
+					try{
+						await navigator.clipboard.writeText(output.value);
+						copyBtn.textContent='<?php echo esc_js(__('Kopiert', 'pretix-eventlister')); ?>';
+						setTimeout(()=>{copyBtn.textContent='<?php echo esc_js(__('Shortcode kopieren', 'pretix-eventlister')); ?>';},1200);
+					}catch(e){
+						output.focus();
+						output.select();
+					}
+				});
+				build();
+			})();
+		</script>
+		<?php
 	}
 
 	public function register_assets() {
@@ -1272,12 +1412,24 @@ final class Pretix_Eventlister {
 	}
 
 	public function download_ics() {
+		if (! $this->allow_public_ics_request()) {
+			status_header(429);
+			echo esc_html__('Zu viele Anfragen. Bitte spaeter erneut versuchen.', 'pretix-eventlister');
+			exit;
+		}
+
 		$options = $this->get_options();
 		$base_url = isset($options['base_url']) ? (string) $options['base_url'] : '';
 		$api_token = isset($options['api_token']) ? (string) $options['api_token'] : '';
 
 		$organizer_slug = isset($_GET['org']) ? sanitize_title(wp_unslash($_GET['org'])) : '';
 		$event_slug = isset($_GET['event']) ? sanitize_title(wp_unslash($_GET['event'])) : '';
+
+		if (strlen($organizer_slug) > 120 || strlen($event_slug) > 120) {
+			status_header(400);
+			echo esc_html__('Ungueltige Anfrage.', 'pretix-eventlister');
+			exit;
+		}
 
 		if (! $base_url || ! $api_token || ! $organizer_slug || ! $event_slug) {
 			status_header(400);
@@ -1355,6 +1507,34 @@ final class Pretix_Eventlister {
 		header('Content-Disposition: attachment; filename="' . sanitize_file_name($filename_slug . '.ics') . '"');
 		echo $ics; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		exit;
+	}
+
+	private function allow_public_ics_request() {
+		$limit = 40;
+		$window = MINUTE_IN_SECONDS;
+		$client = $this->get_public_client_key();
+		$key = self::CACHE_PREFIX . 'ics_rl_' . md5($client);
+		$count = (int) get_transient($key);
+		if ($count >= $limit) {
+			return false;
+		}
+
+		set_transient($key, $count + 1, $window);
+		return true;
+	}
+
+	private function get_public_client_key() {
+		$ip = '';
+		if (! empty($_SERVER['REMOTE_ADDR']) && is_string($_SERVER['REMOTE_ADDR'])) {
+			$ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR']));
+		}
+
+		$ua = '';
+		if (! empty($_SERVER['HTTP_USER_AGENT']) && is_string($_SERVER['HTTP_USER_AGENT'])) {
+			$ua = sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT']));
+		}
+
+		return $ip . '|' . substr($ua, 0, 120);
 	}
 
 	private function build_ics($data) {
@@ -1653,6 +1833,10 @@ final class Pretix_Eventlister {
 
 	public function normalize_installation_state() {
 		if (! is_admin()) {
+			return;
+		}
+
+		if (! current_user_can('activate_plugins')) {
 			return;
 		}
 
@@ -3594,6 +3778,16 @@ final class Pretix_Eventlister {
 
 	private function resolve_next_url($current_url, $next_path) {
 		if (preg_match('#^https?://#i', $next_path)) {
+			$current_parts = wp_parse_url($current_url);
+			$next_parts = wp_parse_url($next_path);
+			if (empty($current_parts['host']) || empty($next_parts['host'])) {
+				return '';
+			}
+
+			if (strtolower((string) $current_parts['host']) !== strtolower((string) $next_parts['host'])) {
+				return '';
+			}
+
 			return $next_path;
 		}
 
