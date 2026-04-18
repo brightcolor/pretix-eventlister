@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
+## [1.7.1] - 2026-04-18
+
+- Fixed tabbed settings save behavior: saving one tab no longer resets values from other tabs to defaults.
+- Added hidden field-presence tracking so option sanitization only updates fields from the currently submitted tab.
+
 ## [1.7.0] - 2026-04-18
 
 - Added tabbed backend settings layout (Connection, Display, Sync & Overrides, Tools) for a cleaner admin UX.

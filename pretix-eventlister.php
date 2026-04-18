@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Displays pretix events in a modern, responsive WordPress layout.
- * Version: 1.7.0
+ * Version: 1.7.1
  * Author: bright color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.7.0';
+	const VERSION = '1.7.1';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -538,6 +538,10 @@ final class Pretix_Eventlister {
 
 	public function sanitize_options($options) {
 		$current = $this->get_options();
+		$present_fields = isset($options['__present_fields']) && is_array($options['__present_fields'])
+			? array_values(array_unique(array_map('sanitize_key', $options['__present_fields'])))
+			: array();
+		$present_lookup = array_fill_keys($present_fields, true);
 		$platform_notice = isset($options['platform_notice']) ? sanitize_textarea_field($options['platform_notice']) : '';
 
 		$sanitized = array(
@@ -580,6 +584,12 @@ final class Pretix_Eventlister {
 			'cpt_sync_interval' => isset($options['cpt_sync_interval']) ? max(1, absint($options['cpt_sync_interval'])) : 12,
 		);
 
+		foreach ($sanitized as $key => $value) {
+			if (! isset($present_lookup[ $key ]) && ! array_key_exists($key, $options) && array_key_exists($key, $current)) {
+				$sanitized[ $key ] = $current[ $key ];
+			}
+		}
+
 		if ($current !== $sanitized) {
 			$this->flush_cache();
 		}
@@ -592,6 +602,12 @@ final class Pretix_Eventlister {
 		$key = $args['key'];
 		$value = isset($options[ $key ]) ? $options[ $key ] : '';
 		$type = isset($args['type']) ? $args['type'] : 'text';
+
+		printf(
+			'<input type="hidden" name="%1$s[__present_fields][]" value="%2$s" />',
+			esc_attr(self::OPTION_KEY),
+			esc_attr($key)
+		);
 
 		if ('textarea' === $type) {
 			printf(
