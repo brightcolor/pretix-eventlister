@@ -2,6 +2,13 @@
 
 WordPress plugin for displaying pretix events in a modern, responsive event card layout.
 
+## New in 2.0.0
+
+- Feature-rich **Layout Composer** tab in backend settings.
+- Drag-and-drop ordering of event card blocks (`schedule`, `body`, `platform_note`, `footer`).
+- Per-block style controls for spacing, typography, colors, border, visibility, alignment, and shadow.
+- Frontend application of custom composer layout and styles to each event card.
+
 ## Installation
 
 1. Always use the release ZIP file `pretix-eventlister-x.y.z.zip` from GitHub Releases.
@@ -31,6 +38,23 @@ Block editor alternative: insert the `Pretix Events` block (Widgets category).
 If CPT sync is enabled, each synced event can be manually overridden in WordPress without being overwritten by the next pretix sync.
 The admin settings page is organized in tabs, and visibility can be controlled via disabled organizers and hidden event keys.
 The settings UI includes a dedicated Shortcode Generator tab to compose and copy full `[pretix_events ...]` configurations.
+The settings UI also includes a dedicated `Layout Composer` tab with drag-and-drop ordering and advanced per-block design controls.
+
+## Layout Composer (Usage Guide)
+
+1. Go to `Settings > Pretix Eventlister > Layout Composer`.
+2. Enable `Composer im Frontend aktivieren`.
+3. Drag blocks from **Bausteine** into **Leinwand** and reorder them.
+4. Click a block in the canvas to edit styles in **Design-Panel**.
+5. Configure spacing, typography, colors, border, alignment, and shadow.
+6. Use the live preview for quick visual checks.
+7. Save with `Composer speichern`.
+8. Open a page with `[pretix_events]` and verify the output.
+
+Notes:
+- Disable `Sichtbar` on a block to hide it in frontend cards.
+- `Auf Standard zurücksetzen` restores default layout and block styles.
+- Composer settings are global and work together with shortcode options.
 
 Examples:
 
@@ -78,3 +102,7 @@ See `CHANGELOG.md` for release history.
 - Source descriptions and documentation use English naming.
 - German UI texts are included directly in the plugin strings where relevant.
 - Low stock behavior is configurable in plugin settings (`low_ticket_threshold`).
+
+## Maintenance Notes
+
+- README is updated on feature releases and includes usage guidance for newly introduced capabilities.

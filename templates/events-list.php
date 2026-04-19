@@ -89,6 +89,7 @@ ksort($organizer_options);
 		data-load-more="<?php echo esc_attr($feature_load_more ? '1' : '0'); ?>"
 		data-page-size="<?php echo esc_attr((int) $page_size); ?>"
 		data-tilt="<?php echo esc_attr($feature_tilt ? '1' : '0'); ?>"
+		data-composer-config="<?php echo esc_attr((string) $composer_config_json); ?>"
 	>
 		<?php foreach ($events as $index => $event) : ?>
 			<?php
@@ -145,7 +146,7 @@ ksort($organizer_options);
 				<?php endif; ?>
 
 				<div class="pretix-eventlister__content">
-					<div class="pretix-eventlister__schedule">
+					<div class="pretix-eventlister__schedule" data-composer-block="schedule">
 						<div class="pretix-eventlister__calendar" aria-hidden="true">
 							<span class="pretix-eventlister__calendar-day"><?php echo esc_html($event['day_label']); ?></span>
 							<span class="pretix-eventlister__calendar-month"><?php echo esc_html($event['month_label']); ?></span>
@@ -205,7 +206,7 @@ ksort($organizer_options);
 						</div>
 					</div>
 
-					<div class="pretix-eventlister__body">
+					<div class="pretix-eventlister__body" data-composer-block="body">
 						<h3 class="pretix-eventlister__title"><?php echo esc_html($event['name']); ?></h3>
 
 						<?php if ($show_description && ! empty($event['description'])) : ?>
@@ -216,13 +217,13 @@ ksort($organizer_options);
 					</div>
 
 					<?php if ($show_platform_notice && ! empty($event['platform_notice'])) : ?>
-						<div class="pretix-eventlister__platform-note">
+						<div class="pretix-eventlister__platform-note" data-composer-block="platform_note">
 							<span class="pretix-eventlister__platform-label"><?php echo esc_html__('Hinweis zum Veranstalter', 'pretix-eventlister'); ?></span>
 							<p><?php echo esc_html($event['platform_notice']); ?></p>
 						</div>
 					<?php endif; ?>
 
-					<div class="pretix-eventlister__footer">
+					<div class="pretix-eventlister__footer" data-composer-block="footer">
 						<div class="pretix-eventlister__footer-actions">
 							<?php if ($show_ticket_button && ! empty($event['url'])) : ?>
 							<a class="pretix-eventlister__button" href="<?php echo esc_url($event['url']); ?>" target="_blank" rel="noopener noreferrer">

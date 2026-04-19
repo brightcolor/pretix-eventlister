@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented here using Semantic Versioning (`major.minor.patch`).
 
+## [2.0.0] - 2026-04-18
+
+- Added a new feature-rich `Layout Composer` tab in backend settings.
+- Added drag-and-drop block composition for card sections (`schedule`, `body`, `partner note`, `footer`).
+- Added per-block style controls:
+  - visibility
+  - padding and margin
+  - text, background, and border color
+  - border width and radius
+  - font family, size, weight, line height, letter spacing, text alignment
+  - shadow
+- Added live style preview for the currently selected block in the composer UI.
+- Added secure sanitization and persistence for composer layout/style JSON settings.
+- Connected composer output to frontend rendering, including block reordering and style application per event card.
+
 ## [1.9.0] - 2026-04-18
 
 - Moved the shortcode generator into its own dedicated backend tab.

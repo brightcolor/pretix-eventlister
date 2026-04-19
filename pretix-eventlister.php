@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Pretix Eventlister
  * Description: Displays pretix events in a modern, responsive WordPress layout.
- * Version: 1.9.0
+ * Version: 2.0.0
  * Author: bright color
  * Author URI: https://github.com/brightcolor/pretix-eventlister
  * Text Domain: pretix-eventlister
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
 }
 
 final class Pretix_Eventlister {
-	const VERSION = '1.9.0';
+	const VERSION = '2.0.0';
 	const PLUGIN_SLUG = 'pretix-eventlister';
 	const OPTION_KEY = 'pretix_eventlister_options';
 	const CACHE_PREFIX = 'pretix_eventlister_';
@@ -582,6 +582,9 @@ final class Pretix_Eventlister {
 			'cpt_sync_scope' => isset($options['cpt_sync_scope']) && in_array($options['cpt_sync_scope'], array('selected', 'all'), true) ? $options['cpt_sync_scope'] : 'selected',
 			'cpt_sync_organizers' => isset($options['cpt_sync_organizers']) ? $this->sanitize_slug_list($options['cpt_sync_organizers']) : '',
 			'cpt_sync_interval' => isset($options['cpt_sync_interval']) ? max(1, absint($options['cpt_sync_interval'])) : 12,
+			'composer_enabled' => ! empty($options['composer_enabled']) ? 1 : 0,
+			'composer_layout_json' => isset($options['composer_layout_json']) ? $this->sanitize_composer_layout_json($options['composer_layout_json']) : '',
+			'composer_styles_json' => isset($options['composer_styles_json']) ? $this->sanitize_composer_styles_json($options['composer_styles_json']) : '',
 		);
 
 		foreach ($sanitized as $key => $value) {
@@ -825,6 +828,7 @@ final class Pretix_Eventlister {
 			'connection' => __('Verbindung', 'pretix-eventlister'),
 			'display' => __('Anzeige', 'pretix-eventlister'),
 			'generator' => __('Shortcode-Generator', 'pretix-eventlister'),
+			'composer' => __('Layout Composer', 'pretix-eventlister'),
 			'sync' => __('Sync & Overrides', 'pretix-eventlister'),
 			'tools' => __('Tools', 'pretix-eventlister'),
 		);
@@ -837,6 +841,7 @@ final class Pretix_Eventlister {
 			'connection' => array('pretix_eventlister_api', 'pretix_eventlister_notes', 'pretix_eventlister_visibility'),
 			'display' => array('pretix_eventlister_display'),
 			'generator' => array(),
+			'composer' => array(),
 			'sync' => array('pretix_eventlister_cpt'),
 			'tools' => array('pretix_eventlister_tools'),
 		);
@@ -882,6 +887,9 @@ final class Pretix_Eventlister {
 			<?php endif; ?>
 			<?php if ('generator' === $active_tab) : ?>
 				<?php $this->render_shortcode_generator(); ?>
+			<?php endif; ?>
+			<?php if ('composer' === $active_tab) : ?>
+				<?php $this->render_composer_builder_v2(); ?>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -1091,6 +1099,355 @@ final class Pretix_Eventlister {
 					btn.addEventListener('click',()=>setPreset(btn.getAttribute('data-preset')));
 				});
 				build();
+			})();
+		</script>
+		<?php
+	}
+
+	private function render_composer_builder_v2() {
+		$options = $this->get_options();
+		$enabled = ! empty($options['composer_enabled']);
+		$layout = $this->get_composer_layout(isset($options['composer_layout_json']) ? $options['composer_layout_json'] : '');
+		$layout_json = wp_json_encode($layout, JSON_UNESCAPED_UNICODE);
+		$styles = $this->get_composer_styles(isset($options['composer_styles_json']) ? $options['composer_styles_json'] : '');
+		$styles_json = wp_json_encode($styles, JSON_UNESCAPED_UNICODE);
+		$palette = array(
+			'schedule' => array(
+				'label' => __('Schedule', 'pretix-eventlister'),
+				'description' => __('Datum, Uhrzeit, Ort, Countdown und Verfügbarkeit', 'pretix-eventlister'),
+			),
+			'body' => array(
+				'label' => __('Body', 'pretix-eventlister'),
+				'description' => __('Titel und Beschreibung', 'pretix-eventlister'),
+			),
+			'platform_note' => array(
+				'label' => __('Partner Note', 'pretix-eventlister'),
+				'description' => __('Optionaler Hinweis zur Plattform', 'pretix-eventlister'),
+			),
+			'footer' => array(
+				'label' => __('Footer', 'pretix-eventlister'),
+				'description' => __('Aktionen, Kalender-Links und Details', 'pretix-eventlister'),
+			),
+		);
+		?>
+		<style>
+			.pel-comp{--pel-border:#cdd9ea;background:radial-gradient(1200px 420px at 0 0,#f8fbff 0,#edf3ff 55%,#e7efff 100%);border:1px solid var(--pel-border);border-radius:18px;padding:18px}
+			.pel-comp__head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+			.pel-comp__head h2{margin:0}
+			.pel-comp__head p{margin:4px 0 0;color:#475569}
+			.pel-comp__toggle{padding:8px 12px;background:#fff;border:1px solid var(--pel-border);border-radius:10px}
+			.pel-comp__wrap{display:grid;grid-template-columns:260px minmax(320px,1fr) minmax(320px,420px);gap:14px}
+			.pel-comp__col{background:#fff;border:1px solid var(--pel-border);border-radius:14px;padding:12px;min-height:280px}
+			.pel-comp__title{margin:0 0 8px;font-weight:700}
+			.pel-comp__sub{margin:0 0 10px;color:#64748b;font-size:12px}
+			.pel-comp__item{display:flex;flex-direction:column;gap:4px;padding:10px;border:1px solid #dbeafe;background:#eff6ff;border-radius:10px;margin-bottom:8px;cursor:grab}
+			.pel-comp__item strong{font-size:13px}
+			.pel-comp__item small{color:#334155}
+			.pel-comp__item--canvas{position:relative;padding-right:34px}
+			.pel-comp__item--canvas.is-active{border-color:#2563eb;background:#dbeafe;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+			.pel-comp__remove{position:absolute;right:8px;top:8px;border:0;background:transparent;color:#dc2626;cursor:pointer;font-size:16px;line-height:1}
+			.pel-comp__drop{min-height:220px;padding:10px;border:1px dashed #93c5fd;border-radius:10px;background:#f8fbff}
+			.pel-comp__empty{padding:18px;text-align:center;color:#64748b}
+			.pel-comp__hint{margin:8px 0 0;color:#475569}
+			.pel-comp__actions{margin-top:12px;display:flex;gap:8px;align-items:center}
+			.pel-comp__panel{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+			.pel-comp__field{display:flex;flex-direction:column;gap:4px}
+			.pel-comp__field label{font-size:12px;color:#334155;font-weight:600}
+			.pel-comp__field input,.pel-comp__field select{width:100%}
+			.pel-comp__field--full{grid-column:1 / -1}
+			.pel-comp__preview{margin-top:10px;padding:12px;border:1px solid #dbe3ee;border-radius:10px;background:#f8fafc}
+			.pel-comp__preview-block{padding:10px;border-radius:8px;border:1px dashed #c6d3e6}
+			@media (max-width:1200px){.pel-comp__wrap{grid-template-columns:1fr}.pel-comp__panel{grid-template-columns:1fr}}
+		</style>
+		<div class="pel-comp">
+			<form method="post" action="options.php" id="pel-composer-form">
+				<?php settings_fields('pretix_eventlister'); ?>
+				<input type="hidden" name="<?php echo esc_attr(self::OPTION_KEY); ?>[__present_fields][]" value="composer_enabled" />
+				<input type="hidden" name="<?php echo esc_attr(self::OPTION_KEY); ?>[__present_fields][]" value="composer_layout_json" />
+				<input type="hidden" name="<?php echo esc_attr(self::OPTION_KEY); ?>[__present_fields][]" value="composer_styles_json" />
+				<input type="hidden" id="pel-composer-layout-json" name="<?php echo esc_attr(self::OPTION_KEY); ?>[composer_layout_json]" value="<?php echo esc_attr($layout_json); ?>" />
+				<input type="hidden" id="pel-composer-styles-json" name="<?php echo esc_attr(self::OPTION_KEY); ?>[composer_styles_json]" value="<?php echo esc_attr($styles_json); ?>" />
+				<div class="pel-comp__head">
+					<div>
+						<h2><?php echo esc_html__('Layout Composer', 'pretix-eventlister'); ?></h2>
+						<p><?php echo esc_html__('Baue dein Kartenlayout per Drag-and-Drop und konfiguriere Design-Optionen pro Baustein.', 'pretix-eventlister'); ?></p>
+					</div>
+					<div class="pel-comp__toggle">
+						<label style="display:inline-flex;align-items:center;gap:8px;">
+							<input type="checkbox" name="<?php echo esc_attr(self::OPTION_KEY); ?>[composer_enabled]" value="1" <?php checked($enabled); ?> />
+							<?php echo esc_html__('Composer im Frontend aktivieren', 'pretix-eventlister'); ?>
+						</label>
+					</div>
+				</div>
+				<div class="pel-comp__wrap">
+					<div class="pel-comp__col">
+						<p class="pel-comp__title"><?php echo esc_html__('Bausteine', 'pretix-eventlister'); ?></p>
+						<p class="pel-comp__sub"><?php echo esc_html__('Ziehe die Bausteine von hier in die Leinwand.', 'pretix-eventlister'); ?></p>
+						<div id="pel-composer-palette">
+							<?php foreach ($palette as $block_key => $meta) : ?>
+								<div class="pel-comp__item" draggable="true" data-block="<?php echo esc_attr($block_key); ?>">
+									<strong><?php echo esc_html($meta['label']); ?></strong>
+									<small><?php echo esc_html($meta['description']); ?></small>
+								</div>
+							<?php endforeach; ?>
+						</div>
+						<p class="pel-comp__hint"><?php echo esc_html__('Tipp: Doppelklick fügt einen Baustein schnell hinzu.', 'pretix-eventlister'); ?></p>
+					</div>
+					<div class="pel-comp__col">
+						<p class="pel-comp__title"><?php echo esc_html__('Leinwand (Frontend-Reihenfolge)', 'pretix-eventlister'); ?></p>
+						<p class="pel-comp__sub"><?php echo esc_html__('Klicke auf einen Baustein, um erweiterte Style-Optionen zu bearbeiten.', 'pretix-eventlister'); ?></p>
+						<div id="pel-composer-canvas" class="pel-comp__drop"></div>
+						<div class="pel-comp__actions">
+							<button type="button" class="button" id="pel-composer-reset"><?php echo esc_html__('Reset to default', 'pretix-eventlister'); ?></button>
+						</div>
+					</div>
+					<div class="pel-comp__col">
+						<p class="pel-comp__title"><?php echo esc_html__('Design-Panel', 'pretix-eventlister'); ?></p>
+						<p class="pel-comp__sub" id="pel-composer-selected-label"><?php echo esc_html__('Kein Baustein ausgewählt', 'pretix-eventlister'); ?></p>
+						<div class="pel-comp__panel" id="pel-composer-style-panel">
+							<div class="pel-comp__field pel-comp__field--full">
+								<label><input type="checkbox" data-style="visible" value="1" /> <?php echo esc_html__('Sichtbar', 'pretix-eventlister'); ?></label>
+							</div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Innenabstand', 'pretix-eventlister'); ?></label><input type="text" data-style="padding" placeholder="16px 12px" /></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Außenabstand', 'pretix-eventlister'); ?></label><input type="text" data-style="margin" placeholder="0 0 12px 0" /></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Textfarbe', 'pretix-eventlister'); ?></label><input type="color" data-style-color="text_color" /></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Hintergrund', 'pretix-eventlister'); ?></label><input type="color" data-style-color="background_color" /></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Rahmenfarbe', 'pretix-eventlister'); ?></label><input type="color" data-style-color="border_color" /></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Rahmenbreite', 'pretix-eventlister'); ?></label><input type="text" data-style="border_width" placeholder="1px" /></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Eckenradius', 'pretix-eventlister'); ?></label><input type="text" data-style="border_radius" placeholder="12px" /></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Schriftfamilie', 'pretix-eventlister'); ?></label><input type="text" data-style="font_family" placeholder="Inter, sans-serif" /></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Schriftgröße', 'pretix-eventlister'); ?></label><input type="text" data-style="font_size" placeholder="16px" /></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Schriftstärke', 'pretix-eventlister'); ?></label><select data-style="font_weight"><option value=""><?php echo esc_html__('Standard', 'pretix-eventlister'); ?></option><option value="normal">normal</option><option value="bold">bold</option><option value="300">300</option><option value="400">400</option><option value="500">500</option><option value="600">600</option><option value="700">700</option><option value="800">800</option></select></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Zeilenhöhe', 'pretix-eventlister'); ?></label><input type="text" data-style="line_height" placeholder="1.5" /></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Zeichenabstand', 'pretix-eventlister'); ?></label><input type="text" data-style="letter_spacing" placeholder="0.02em" /></div>
+							<div class="pel-comp__field"><label><?php echo esc_html__('Textausrichtung', 'pretix-eventlister'); ?></label><select data-style="text_align"><option value=""><?php echo esc_html__('Standard', 'pretix-eventlister'); ?></option><option value="left"><?php echo esc_html__('Links', 'pretix-eventlister'); ?></option><option value="center"><?php echo esc_html__('Zentriert', 'pretix-eventlister'); ?></option><option value="right"><?php echo esc_html__('Rechts', 'pretix-eventlister'); ?></option><option value="justify"><?php echo esc_html__('Blocksatz', 'pretix-eventlister'); ?></option></select></div>
+							<div class="pel-comp__field pel-comp__field--full"><label><?php echo esc_html__('Schatten', 'pretix-eventlister'); ?></label><input type="text" data-style="shadow" placeholder="0 8px 20px rgba(0,0,0,.12)" /></div>
+						</div>
+						<div class="pel-comp__preview">
+							<div class="pel-comp__preview-block" id="pel-composer-preview"><?php echo esc_html__('Live-Vorschau des ausgewählten Bausteins', 'pretix-eventlister'); ?></div>
+						</div>
+					</div>
+				</div>
+				<?php submit_button(__('Composer speichern', 'pretix-eventlister')); ?>
+			</form>
+		</div>
+		<script>
+			(function(){
+				const palette=<?php echo wp_json_encode($palette, JSON_UNESCAPED_UNICODE); ?>;
+				const defaultLayout=<?php echo wp_json_encode($this->get_default_composer_layout(), JSON_UNESCAPED_UNICODE); ?>;
+				const defaultStyles=<?php echo wp_json_encode($this->get_default_composer_styles(), JSON_UNESCAPED_UNICODE); ?>;
+				const canvas=document.getElementById('pel-composer-canvas');
+				const layoutInput=document.getElementById('pel-composer-layout-json');
+				const stylesInput=document.getElementById('pel-composer-styles-json');
+				const resetBtn=document.getElementById('pel-composer-reset');
+				const paletteEl=document.getElementById('pel-composer-palette');
+				const panel=document.getElementById('pel-composer-style-panel');
+				const selectedLabel=document.getElementById('pel-composer-selected-label');
+				const preview=document.getElementById('pel-composer-preview');
+				if(!canvas||!layoutInput||!stylesInput||!paletteEl||!panel){return;}
+
+				let draggedKey='';
+				let activeKey='';
+				const state={layout:[],styles:{}};
+				try{ state.layout=JSON.parse(layoutInput.value||'[]'); }catch(e){ state.layout=[]; }
+				try{ state.styles=JSON.parse(stylesInput.value||'{}'); }catch(e){ state.styles={}; }
+				if(!Array.isArray(state.layout)||!state.layout.length){ state.layout=defaultLayout.slice(); }
+				state.layout=state.layout.filter((k)=>Object.prototype.hasOwnProperty.call(palette,k));
+				if(!state.layout.length){ state.layout=defaultLayout.slice(); }
+
+				function deepClone(obj){
+					return JSON.parse(JSON.stringify(obj||{}));
+				}
+
+				function ensureStyles(blockKey){
+					if(!Object.prototype.hasOwnProperty.call(state.styles,blockKey)||typeof state.styles[blockKey]!=='object'||!state.styles[blockKey]){
+						state.styles[blockKey]=deepClone(defaultStyles[blockKey]||{visible:1});
+						return;
+					}
+					const fallback=defaultStyles[blockKey]||{};
+					Object.keys(fallback).forEach((k)=>{
+						if(!Object.prototype.hasOwnProperty.call(state.styles[blockKey],k)){
+							state.styles[blockKey][k]=fallback[k];
+						}
+					});
+				}
+
+				Object.keys(defaultStyles).forEach(ensureStyles);
+
+				function blockNode(key){
+					const node=document.createElement('div');
+					node.className='pel-comp__item pel-comp__item--canvas';
+					if(activeKey===key){ node.classList.add('is-active'); }
+					node.setAttribute('draggable','true');
+					node.setAttribute('data-block',key);
+					node.innerHTML='<strong>'+(palette[key]&&palette[key].label?palette[key].label:key)+'</strong><small>'+(palette[key]&&palette[key].description?palette[key].description:'')+'</small><button type="button" class="pel-comp__remove" data-remove="'+key+'" aria-label="remove">×</button>';
+					node.addEventListener('dragstart',()=>{draggedKey=key;});
+					node.addEventListener('click',(event)=>{
+						if(event.target&&event.target.closest('[data-remove]')){return;}
+						selectBlock(key);
+					});
+					return node;
+				}
+
+				function syncHidden(){
+					layoutInput.value=JSON.stringify(state.layout);
+					stylesInput.value=JSON.stringify(state.styles);
+				}
+
+				function toColorValue(raw){
+					if(typeof raw!=='string'||!raw){ return '#000000'; }
+					const value=raw.trim();
+					if(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value)){
+						return value.length===4 ? '#'+value[1]+value[1]+value[2]+value[2]+value[3]+value[3] : value;
+					}
+					return '#000000';
+				}
+
+				function applyPreviewStyles(styles){
+					if(!preview){return;}
+					preview.style.padding=styles.padding||'';
+					preview.style.margin=styles.margin||'';
+					preview.style.color=styles.text_color||'';
+					preview.style.background=styles.background_color||'';
+					preview.style.borderColor=styles.border_color||'';
+					preview.style.borderWidth=styles.border_width||'';
+					preview.style.borderStyle=styles.border_width ? 'solid' : '';
+					preview.style.borderRadius=styles.border_radius||'';
+					preview.style.fontFamily=styles.font_family||'';
+					preview.style.fontSize=styles.font_size||'';
+					preview.style.fontWeight=styles.font_weight||'';
+					preview.style.lineHeight=styles.line_height||'';
+					preview.style.letterSpacing=styles.letter_spacing||'';
+					preview.style.textAlign=styles.text_align||'';
+					preview.style.boxShadow=styles.shadow||'';
+					preview.style.opacity=styles.visible ? '1' : '.45';
+				}
+
+				function fillPanelForActive(){
+					if(!activeKey||!Object.prototype.hasOwnProperty.call(palette,activeKey)){return;}
+					ensureStyles(activeKey);
+					const styles=state.styles[activeKey];
+					if(selectedLabel){
+						selectedLabel.textContent=(palette[activeKey]&&palette[activeKey].label?palette[activeKey].label:activeKey);
+					}
+					panel.querySelectorAll('[data-style]').forEach((input)=>{
+						const key=input.getAttribute('data-style');
+						if(!key){return;}
+						if(input.type==='checkbox'){
+							input.checked=!!styles[key];
+						}else{
+							input.value=styles[key]||'';
+						}
+					});
+					panel.querySelectorAll('[data-style-color]').forEach((input)=>{
+						const key=input.getAttribute('data-style-color');
+						if(!key){return;}
+						input.value=toColorValue(styles[key]||'');
+					});
+					applyPreviewStyles(styles);
+				}
+
+				function selectBlock(key){
+					if(!key||state.layout.indexOf(key)===-1){return;}
+					activeKey=key;
+					render();
+					fillPanelForActive();
+				}
+
+				function render(){
+					canvas.innerHTML='';
+					state.layout.forEach((key)=>canvas.appendChild(blockNode(key)));
+					if(!state.layout.length){
+						const empty=document.createElement('div');
+						empty.className='pel-comp__empty';
+						empty.textContent='<?php echo esc_js(__('Füge mindestens einen Baustein aus der Palette hinzu.', 'pretix-eventlister')); ?>';
+						canvas.appendChild(empty);
+					}
+					if(!activeKey||state.layout.indexOf(activeKey)===-1){
+						activeKey=state.layout.length?state.layout[0]:'';
+					}
+					syncHidden();
+					fillPanelForActive();
+				}
+
+				paletteEl.querySelectorAll('.pel-comp__item').forEach((item)=>{
+					item.addEventListener('dragstart',()=>{draggedKey=item.getAttribute('data-block')||'';});
+					item.addEventListener('dblclick',()=>{
+						const key=item.getAttribute('data-block')||'';
+						if(key&&state.layout.indexOf(key)===-1){
+							state.layout.push(key);
+							activeKey=key;
+							render();
+						}
+					});
+				});
+
+				canvas.addEventListener('dragover',(e)=>e.preventDefault());
+				canvas.addEventListener('drop',(e)=>{
+					e.preventDefault();
+					if(!draggedKey||!Object.prototype.hasOwnProperty.call(palette,draggedKey)){return;}
+					const target=e.target.closest('[data-block]');
+					const oldIdx=state.layout.indexOf(draggedKey);
+					if(oldIdx!==-1){ state.layout.splice(oldIdx,1); }
+					if(target){
+						const key=target.getAttribute('data-block')||'';
+						const idx=state.layout.indexOf(key);
+						if(idx===-1){ state.layout.push(draggedKey); } else { state.layout.splice(idx,0,draggedKey); }
+					}else{
+						state.layout.push(draggedKey);
+					}
+					state.layout=state.layout.filter((k,i)=>state.layout.indexOf(k)===i);
+					if(!activeKey){ activeKey=draggedKey; }
+					render();
+				});
+
+				canvas.addEventListener('click',(e)=>{
+					const remove=e.target.closest('[data-remove]');
+					if(!remove){return;}
+					const key=remove.getAttribute('data-remove')||'';
+					state.layout=state.layout.filter((k)=>k!==key);
+					render();
+				});
+
+				panel.querySelectorAll('[data-style]').forEach((input)=>{
+					const handler=()=>{
+						if(!activeKey){return;}
+						ensureStyles(activeKey);
+						const key=input.getAttribute('data-style');
+						if(!key){return;}
+						state.styles[activeKey][key]=input.type==='checkbox' ? (input.checked ? 1 : 0) : (input.value||'').trim();
+						syncHidden();
+						applyPreviewStyles(state.styles[activeKey]);
+					};
+					input.addEventListener('input',handler);
+					input.addEventListener('change',handler);
+				});
+
+				panel.querySelectorAll('[data-style-color]').forEach((input)=>{
+					const handler=()=>{
+						if(!activeKey){return;}
+						ensureStyles(activeKey);
+						const key=input.getAttribute('data-style-color');
+						if(!key){return;}
+						state.styles[activeKey][key]=(input.value||'').trim();
+						syncHidden();
+						applyPreviewStyles(state.styles[activeKey]);
+					};
+					input.addEventListener('input',handler);
+					input.addEventListener('change',handler);
+				});
+
+				if(resetBtn){
+					resetBtn.addEventListener('click',()=>{
+						state.layout=defaultLayout.slice();
+						state.styles=deepClone(defaultStyles);
+						activeKey=state.layout[0]||'';
+						render();
+					});
+				}
+
+				activeKey=state.layout[0]||'';
+				render();
 			})();
 		</script>
 		<?php
@@ -1773,6 +2130,13 @@ final class Pretix_Eventlister {
 		$feature_modal = $query['feature_modal'];
 		$feature_tilt = $query['feature_tilt'];
 		$accent_color = ! empty($options['accent_color']) ? (string) $options['accent_color'] : '';
+		$composer_enabled = ! empty($options['composer_enabled']);
+		$composer_config = array(
+			'enabled' => $composer_enabled,
+			'layout' => $this->get_composer_layout(isset($options['composer_layout_json']) ? $options['composer_layout_json'] : ''),
+			'styles' => $this->get_composer_styles(isset($options['composer_styles_json']) ? $options['composer_styles_json'] : ''),
+		);
+		$composer_config_json = wp_json_encode($composer_config);
 		$instance_id = 'pretix-' . substr(md5(uniqid('', true)), 0, 10);
 
 		$layout_class = 'list' === $query['style']
@@ -3941,6 +4305,224 @@ final class Pretix_Eventlister {
 		return plugin_basename(__FILE__);
 	}
 
+	private function get_composer_blocks() {
+		return array(
+			'schedule',
+			'body',
+			'platform_note',
+			'footer',
+		);
+	}
+
+	private function get_default_composer_layout() {
+		return $this->get_composer_blocks();
+	}
+
+	private function get_default_composer_styles() {
+		$defaults = array(
+			'visible' => 1,
+			'padding' => '',
+			'margin' => '',
+			'text_color' => '',
+			'background_color' => '',
+			'border_color' => '',
+			'border_width' => '',
+			'border_radius' => '',
+			'font_family' => '',
+			'font_size' => '',
+			'font_weight' => '',
+			'line_height' => '',
+			'letter_spacing' => '',
+			'text_align' => '',
+			'shadow' => '',
+		);
+
+		$styles = array();
+		foreach ($this->get_composer_blocks() as $block) {
+			$styles[ $block ] = $defaults;
+		}
+
+		return $styles;
+	}
+
+	private function get_composer_layout($raw_json) {
+		$decoded = json_decode(is_string($raw_json) ? $raw_json : '', true);
+		$allowed = $this->get_composer_blocks();
+		$allowed_lookup = array_fill_keys($allowed, true);
+		$layout = array();
+
+		if (is_array($decoded)) {
+			foreach ($decoded as $item) {
+				$key = sanitize_key((string) $item);
+				if (! isset($allowed_lookup[ $key ])) {
+					continue;
+				}
+				if (! in_array($key, $layout, true)) {
+					$layout[] = $key;
+				}
+			}
+		}
+
+		if (empty($layout)) {
+			return $this->get_default_composer_layout();
+		}
+
+		return $layout;
+	}
+
+	private function get_composer_styles($raw_json) {
+		$decoded = json_decode(is_string($raw_json) ? $raw_json : '', true);
+		$defaults = $this->get_default_composer_styles();
+		$styles = array();
+
+		foreach ($defaults as $block => $default_style) {
+			$source = array();
+			if (is_array($decoded) && isset($decoded[ $block ]) && is_array($decoded[ $block ])) {
+				$source = $decoded[ $block ];
+			}
+			$styles[ $block ] = $this->sanitize_composer_style_group($source, $default_style);
+		}
+
+		return $styles;
+	}
+
+	private function sanitize_composer_layout_json($raw_json) {
+		$layout = $this->get_composer_layout($raw_json);
+		return wp_json_encode($layout);
+	}
+
+	private function sanitize_composer_styles_json($raw_json) {
+		$styles = $this->get_composer_styles($raw_json);
+		return wp_json_encode($styles);
+	}
+
+	private function sanitize_composer_style_group($source, $defaults) {
+		$style = is_array($source) ? $source : array();
+
+		$visible = isset($style['visible']) ? $style['visible'] : $defaults['visible'];
+		$visible = (is_numeric($visible) && (int) $visible < 1) ? 0 : (! empty($visible) ? 1 : 0);
+
+		$font_weight = isset($style['font_weight']) ? trim((string) $style['font_weight']) : '';
+		if ('' !== $font_weight && ! preg_match('/^(normal|bold|[1-9]00)$/', $font_weight)) {
+			$font_weight = '';
+		}
+
+		$text_align = isset($style['text_align']) ? sanitize_key((string) $style['text_align']) : '';
+		if (! in_array($text_align, array('', 'left', 'center', 'right', 'justify'), true)) {
+			$text_align = '';
+		}
+
+		return array(
+			'visible' => $visible,
+			'padding' => $this->sanitize_css_spacing(isset($style['padding']) ? $style['padding'] : ''),
+			'margin' => $this->sanitize_css_spacing(isset($style['margin']) ? $style['margin'] : ''),
+			'text_color' => $this->sanitize_css_color(isset($style['text_color']) ? $style['text_color'] : ''),
+			'background_color' => $this->sanitize_css_color(isset($style['background_color']) ? $style['background_color'] : ''),
+			'border_color' => $this->sanitize_css_color(isset($style['border_color']) ? $style['border_color'] : ''),
+			'border_width' => $this->sanitize_css_length(isset($style['border_width']) ? $style['border_width'] : ''),
+			'border_radius' => $this->sanitize_css_length(isset($style['border_radius']) ? $style['border_radius'] : ''),
+			'font_family' => $this->sanitize_css_font_family(isset($style['font_family']) ? $style['font_family'] : ''),
+			'font_size' => $this->sanitize_css_length(isset($style['font_size']) ? $style['font_size'] : ''),
+			'font_weight' => $font_weight,
+			'line_height' => $this->sanitize_css_length(isset($style['line_height']) ? $style['line_height'] : '', true),
+			'letter_spacing' => $this->sanitize_css_length(isset($style['letter_spacing']) ? $style['letter_spacing'] : '', true),
+			'text_align' => $text_align,
+			'shadow' => $this->sanitize_css_shadow(isset($style['shadow']) ? $style['shadow'] : ''),
+		);
+	}
+
+	private function sanitize_css_length($value, $allow_unitless = false) {
+		$value = trim((string) $value);
+		if ('' === $value) {
+			return '';
+		}
+
+		if ('0' === $value || 'auto' === strtolower($value)) {
+			return strtolower($value);
+		}
+
+		$pattern = $allow_unitless
+			? '/^-?\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw)?$/'
+			: '/^-?\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw)$/';
+
+		if (! preg_match($pattern, $value)) {
+			return '';
+		}
+
+		return $value;
+	}
+
+	private function sanitize_css_spacing($value) {
+		$value = trim((string) $value);
+		if ('' === $value) {
+			return '';
+		}
+
+		$parts = preg_split('/\s+/', $value);
+		if (! is_array($parts) || empty($parts) || count($parts) > 4) {
+			return '';
+		}
+
+		$sanitized = array();
+		foreach ($parts as $part) {
+			$clean = $this->sanitize_css_length($part, true);
+			if ('' === $clean) {
+				return '';
+			}
+			$sanitized[] = $clean;
+		}
+
+		return implode(' ', $sanitized);
+	}
+
+	private function sanitize_css_color($value) {
+		$value = trim((string) $value);
+		if ('' === $value) {
+			return '';
+		}
+
+		$hex = sanitize_hex_color($value);
+		if ($hex) {
+			return $hex;
+		}
+
+		if (preg_match('/^(rgba?|hsla?)\([0-9\.\,\s%]+\)$/i', $value)) {
+			return $value;
+		}
+
+		return '';
+	}
+
+	private function sanitize_css_font_family($value) {
+		$value = trim((string) $value);
+		if ('' === $value) {
+			return '';
+		}
+
+		if (! preg_match('/^[a-zA-Z0-9,\-\s"\']+$/', $value)) {
+			return '';
+		}
+
+		return $value;
+	}
+
+	private function sanitize_css_shadow($value) {
+		$value = trim((string) $value);
+		if ('' === $value) {
+			return '';
+		}
+
+		if (strlen($value) > 120) {
+			return '';
+		}
+
+		if (! preg_match('/^[a-zA-Z0-9#(),.\-\s%]+$/', $value)) {
+			return '';
+		}
+
+		return $value;
+	}
+
 	private function get_options() {
 		$stored = get_option(self::OPTION_KEY, array());
 		$legacy_organizer = ! empty($stored['organizer']) ? $this->sanitize_slug_list($stored['organizer']) : '';
@@ -3983,6 +4565,9 @@ final class Pretix_Eventlister {
 			'cpt_sync_scope' => 'selected',
 			'cpt_sync_organizers' => '',
 			'cpt_sync_interval' => 12,
+			'composer_enabled' => 0,
+			'composer_layout_json' => wp_json_encode($this->get_default_composer_layout()),
+			'composer_styles_json' => wp_json_encode($this->get_default_composer_styles()),
 		);
 
 		$options = wp_parse_args($stored, $defaults);
